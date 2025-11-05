@@ -98,7 +98,7 @@ namespace TrustFlow.Core.Seed
                     PasswordHash = hashedPassword,
                     FirstName = "System",
                     LastName = "Administrator",
-                    Roles = new List<string> { "Admin", "Developer", "Tester", "Reporter" },
+                    Role = "Admin",
                     IsActive = true
                 };
 

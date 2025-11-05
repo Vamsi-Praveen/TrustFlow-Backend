@@ -1,4 +1,5 @@
 
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
 using TrustFlow.Core.Data;
 using TrustFlow.Core.Helpers;
@@ -24,7 +25,41 @@ namespace TrustFlow.API
                 return new ApplicationContext(mongoSettings);
             });
 
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/api/users/authenticate";
+                    options.AccessDeniedPath = "/api/users/access-denied";
+                    options.Events = new CookieAuthenticationEvents
+                    {
+                        OnRedirectToLogin = ctx =>
+                        {
+                            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return Task.CompletedTask;
+                        },
+                        OnRedirectToAccessDenied = ctx =>
+                        {
+                            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
+
+            builder.Services.AddAuthorization();
             builder.Services.AddControllers();
+
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend", policy =>
+                {
+                    policy.WithOrigins("http://localhost:5173")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -62,8 +97,10 @@ namespace TrustFlow.API
 
             app.UseHttpsRedirection();
 
-            app.UseAuthorization();
+            app.UseCors("AllowFrontend");
 
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.MapControllers();
 

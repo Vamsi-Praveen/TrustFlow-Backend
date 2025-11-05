@@ -19,8 +19,8 @@ namespace TrustFlow.Core.Models
         [BsonElement("LastName")]
         public string LastName { get; set; }
 
-        [BsonElement("Roles")]
-        public List<string> Roles { get; set; } = new List<string>();
+        [BsonElement("Role")]
+        public string Role { get; set; }
 
         [BsonElement("IsActive")]
         public bool IsActive { get; set; } = true;

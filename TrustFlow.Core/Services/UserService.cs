@@ -1,12 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using TrustFlow.Core.Communication;
 using TrustFlow.Core.Data;
 using TrustFlow.Core.Helpers;
 using TrustFlow.Core.Models;
-using TrustFlow.Core.Communication; // Add this using directive
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace TrustFlow.Core.Services
 {
@@ -72,7 +69,7 @@ namespace TrustFlow.Core.Services
                     return new ServiceResult(false, "Username cannot be empty.");
                 }
 
-                var user = await _users.Find(u => u.Username.ToLower() == username.ToLower()).FirstOrDefaultAsync();
+                var user = await _users.Find(u => u.Email.ToLower() == username.ToLower()).FirstOrDefaultAsync();
 
                 if (user == null)
                 {
@@ -112,7 +109,6 @@ namespace TrustFlow.Core.Services
                 newUser.CreatedAt = DateTime.UtcNow;
                 newUser.UpdatedAt = DateTime.UtcNow;
                 newUser.IsActive = true;
-                newUser.Roles ??= new List<string> { "Reporter" }; // Assign a default role
 
                 await _users.InsertOneAsync(newUser);
                 _logger.LogInformation("Successfully created new user: {Username}", newUser.Username);
@@ -137,11 +133,10 @@ namespace TrustFlow.Core.Services
                 var getResult = await GetUserByIdAsync(id);
                 if (!getResult.Success)
                 {
-                    return getResult; // "User not found"
+                    return getResult;
                 }
                 var existingUser = (User)getResult.Result;
 
-                // Check for duplicate Email if it has changed
                 if (existingUser.Email.ToLower() != updatedUser.Email.ToLower())
                 {
                     var duplicate = await _users.Find(u => u.Id != id && u.Email.ToLower() == updatedUser.Email.ToLower()).FirstOrDefaultAsync();
@@ -155,10 +150,9 @@ namespace TrustFlow.Core.Services
                 existingUser.FirstName = updatedUser.FirstName;
                 existingUser.LastName = updatedUser.LastName;
                 existingUser.IsActive = updatedUser.IsActive;
-                existingUser.Roles = updatedUser.Roles;
+                existingUser.Role = updatedUser.Role;
                 existingUser.UpdatedAt = DateTime.UtcNow;
 
-                // Handle password update: assumes updatedUser.PasswordHash contains plain text if it needs to be changed
                 if (!string.IsNullOrWhiteSpace(updatedUser.PasswordHash))
                 {
                     existingUser.PasswordHash = _passwordHelper.HashPassword(updatedUser.PasswordHash);
@@ -212,26 +206,16 @@ namespace TrustFlow.Core.Services
             {
                 var getResult = await GetUserByUsernameAsync(username);
                 if (!getResult.Success)
-                {
-                    _logger.LogWarning("Authentication failed for user {Username}: User not found.", username);
                     return new ServiceResult(false, "Invalid username or password.");
-                }
 
                 var user = (User)getResult.Result;
 
                 if (!user.IsActive)
-                {
-                    _logger.LogWarning("Authentication failed for user {Username}: Account is inactive.", username);
                     return new ServiceResult(false, "Your account is inactive.");
-                }
 
                 if (!_passwordHelper.VerifyPassword(password, user.PasswordHash))
-                {
-                    _logger.LogWarning("Authentication failed for user {Username}: Invalid password.", username);
                     return new ServiceResult(false, "Invalid username or password.");
-                }
 
-                _logger.LogInformation("User {Username} successfully authenticated.", username);
                 return new ServiceResult(true, "Authentication successful.", user);
             }
             catch (Exception ex)
@@ -240,5 +224,6 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred during authentication.");
             }
         }
+
     }
 }

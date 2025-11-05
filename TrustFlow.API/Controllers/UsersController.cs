@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.DTOs;
 using TrustFlow.Core.Models;
@@ -136,7 +140,7 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-
+        [AllowAnonymous]
         [HttpPost("authenticate")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
@@ -151,7 +155,61 @@ namespace TrustFlow.API.Controllers
 
             var result = await _userService.AuthenticateAsync(loginRequest.Username, loginRequest.Password);
 
-            return ToActionResult(result);
+            if (!result.Success)
+                return Unauthorized(new APIResponse(false, result.Message));
+
+            var user = (User)result.Result;
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Role, user.Role)
+            };
+
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTime.UtcNow.AddHours(8)
+                });
+
+            return Ok(new APIResponse(true, "Login successful.", new
+            {
+                user.Username,
+                user.Email,
+                user.Role
+            }));
+        }
+
+        [HttpPost("logout")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return Ok(new APIResponse(true, "You have been logged out."));
+        }
+
+        [HttpGet("me")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new APIResponse(false, "Not authenticated."));
+
+            var result = await _userService.GetUserByIdAsync(userId);
+            if (result == null)
+                return Unauthorized(new APIResponse(false, "User not found."));
+
+            return Ok(new APIResponse(true, "User retrieved successfully.", result));
         }
     }
 }
