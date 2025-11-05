@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrustFlow.API", "TrustFlow.API\TrustFlow.API.csproj", "{B35E2549-A47D-4280-A064-75CEA826B50B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrustFlow.Core", "TrustFlow.Core\TrustFlow.Core.csproj", "{D8B3E332-F8FE-4BE0-B7D5-71D1A67B4D3A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B35E2549-A47D-4280-A064-75CEA826B50B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B35E2549-A47D-4280-A064-75CEA826B50B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B35E2549-A47D-4280-A064-75CEA826B50B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B35E2549-A47D-4280-A064-75CEA826B50B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8B3E332-F8FE-4BE0-B7D5-71D1A67B4D3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8B3E332-F8FE-4BE0-B7D5-71D1A67B4D3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8B3E332-F8FE-4BE0-B7D5-71D1A67B4D3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8B3E332-F8FE-4BE0-B7D5-71D1A67B4D3A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5D7A0856-23FA-4EBC-B42F-87B9E139116B}
+	EndGlobalSection
+EndGlobal

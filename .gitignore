@@ -1,0 +1,133 @@
+# ========== Build Folders ==========
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+[Tt]emp/
+
+# ========== User-specific files ==========
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+.idea/
+.vs/
+
+# ========== Visual Studio Code ==========
+.history/
+*.code-workspace
+
+# ========== Build results ==========
+*.dll
+*.exe
+*.appx
+*.appxupload
+*.appxbundle
+*.msix
+*.msixupload
+*.msixbundle
+*.nupkg
+*.snupkg
+*.log
+
+# ========== Test results ==========
+TestResults/
+*.TestResults/
+*.coverage
+*.coveragexml
+
+# ========== Publish outputs ==========
+publish/
+out/
+artifacts/
+
+# ========== NuGet ==========
+# *.nupkg
+# *.snupkg
+# .nuget/
+# packages/
+# *.nuget.props
+# *.nuget.targets
+
+# ========== Entity Framework Migrations cache ==========
+migrations/
+Migrations/
+
+# ========== User secrets ==========
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+*.local.json
+
+# ========== Environment & system files ==========
+*.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ========== ReSharper / Rider ==========
+_ReSharper*/
+*.DotSettings.user
+
+# ========== JetBrains Rider ==========
+.idea/
+*.sln.iml
+
+# ========== Rider / Visual Studio caches ==========
+*.ncrunchsolution
+*.ncrunchproject
+
+# ========== Dump files ==========
+*.stackdump
+*.dmp
+
+# ========== Temporary files ==========
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+*.swp
+
+# ========== Logs ==========
+*.log
+logs/
+Logs/
+log/
+
+# ========== Coverage tools ==========
+coverage/
+coverage.xml
+*.coverage
+*.coveragexml
+
+# ========== Build configuration ==========
+launchSettings.json
+
+# ========== OS specific ==========
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ========== Custom Project Artifacts ==========
+# Ignore local dev data or secrets
+local.settings.json
+.env
+.env.*
+*.key
+*.pfx
+
+# ========== Keep example configs ==========
+!appsettings.json
+!appsettings.Template.json
