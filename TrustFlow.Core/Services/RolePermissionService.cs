@@ -9,12 +9,14 @@ namespace TrustFlow.Core.Services
     public class RolePermissionService
     {
         private readonly IMongoCollection<RolePermission> _roles;
+        private readonly IMongoCollection<User> _users;
         private readonly ILogger<RolePermissionService> _logger;
 
         public RolePermissionService(ApplicationContext context, ILogger<RolePermissionService> logger)
         {
             _logger = logger;
             _roles = context.RolePermissions;
+            _users = context.Users;
         }
 
         public async Task<ServiceResult> GetRolePermissionsAsync()
@@ -22,7 +24,23 @@ namespace TrustFlow.Core.Services
             try
             {
                 var roles = await _roles.Find(_ => true).ToListAsync();
-                return new ServiceResult(true, "Roles retrieved successfully.", roles);
+
+                var rolesData = new List<object>();
+
+                foreach (var role in roles)
+                {
+                    var userCount = await _users.CountDocumentsAsync(u => u.Role.ToLower() == role.RoleName.ToLower());
+                    _logger.LogInformation("Role: {RoleName} has {UserCount} users assigned.", role.RoleName, userCount);
+
+                    rolesData.Add(new
+                    {
+                        Role = role,
+                        UserCount = userCount
+                    });
+
+                }               
+
+                return new ServiceResult(true, "Roles retrieved successfully.", rolesData);
             }
             catch (Exception ex)
             {
