@@ -30,6 +30,11 @@ namespace TrustFlow.API
                 {
                     options.LoginPath = "/api/users/authenticate";
                     options.AccessDeniedPath = "/api/users/access-denied";
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = SameSiteMode.None;
+                    options.SlidingExpiration = true;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
                     options.Events = new CookieAuthenticationEvents
                     {
                         OnRedirectToLogin = ctx =>
