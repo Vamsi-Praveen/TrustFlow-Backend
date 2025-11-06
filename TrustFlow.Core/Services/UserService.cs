@@ -36,6 +36,66 @@ namespace TrustFlow.Core.Services
             }
         }
 
+
+        public async Task<ServiceResult> GetCompleteUserById(string id)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    _logger.LogInformation("User id cannot be empty");
+                    return new ServiceResult(false, "User ID cannot be empty.");
+                }
+
+                var user = await _users.Find(u => u.Id == id).FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    _logger.LogInformation($"User with ID '{id}' not found.");
+                    return new ServiceResult(false, $"User with ID '{id}' not found.");
+                }
+
+                var role = await _roles.Find(r => r.Id == user.RoleId).FirstOrDefaultAsync();
+
+                if (role == null)
+                {
+                    _logger.LogError($"Role not found id {user.RoleId}");
+                }
+
+                //Filter only allowed role permissions
+                var rolePermissions = role?
+                          .GetType()
+                          .GetProperties()
+                          .Where(p => p.PropertyType == typeof(bool) && (bool)p.GetValue(role) == true)
+                          .Select(p => p.Name)
+                          .ToList();
+
+                _logger.LogInformation($"User {user.Id} roles: {rolePermissions} ");
+
+                var userResponse = new
+                {
+                    user.Id,
+                    user.Username,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    user.RoleId,
+                    user.Role,
+                    user.IsActive,
+                    user.CreatedAt,
+                    user.UpdatedAt,
+                    Permissions = rolePermissions
+                };
+
+                return new ServiceResult(true, "User retrieved successfully.", userResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve user by ID: {UserId}", id);
+                return new ServiceResult(false, "An internal error occurred while retrieving the user.");
+            }
+        }
+
         public async Task<ServiceResult> GetUserByIdAsync(string id)
         {
             try
@@ -105,7 +165,17 @@ namespace TrustFlow.Core.Services
                     return new ServiceResult(false, errorMessage);
                 }
 
-                newUser.PasswordHash = _passwordHelper.HashPassword(newUser.PasswordHash);
+                var roleId = newUser.RoleId;
+
+                var isRoleExist = await _roles.Find(r => r.Id == roleId).FirstOrDefaultAsync();
+
+                if (isRoleExist == null)
+                {
+                    _logger.LogError($"Role not found with id {roleId}");
+                    return new ServiceResult(false, "Role not found");
+                }
+
+                newUser.PasswordHash = _passwordHelper.HashPassword("trustflow");
                 newUser.CreatedAt = DateTime.UtcNow;
                 newUser.UpdatedAt = DateTime.UtcNow;
                 newUser.IsActive = true;

@@ -49,6 +49,27 @@ namespace TrustFlow.Core.Services
             }
         }
 
+        public async Task<ServiceResult> GetRolePermissionsListAsync()
+        {
+            try
+            {
+                var roles = await _roles.Find(_ => true).ToListAsync();
+
+                var rolesData = roles.Select(r => new
+                {
+                    r.RoleName,
+                    r.Id
+                }).ToList();
+
+                return new ServiceResult(true, "Roles retrieved successfully.", rolesData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve all roles.");
+                return new ServiceResult(false, "An internal error occurred while retrieving roles.");
+            }
+        }
+
         public async Task<ServiceResult> GetRolePermissionByIdAsync(string id)
         {
             try

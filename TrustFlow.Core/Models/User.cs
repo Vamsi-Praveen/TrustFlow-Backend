@@ -11,7 +11,7 @@ namespace TrustFlow.Core.Models
         public string Email { get; set; }
 
         [BsonElement("Password")]
-        public string PasswordHash { get; set; }
+        public string? PasswordHash { get; set; }
 
         [BsonElement("FirstName")]
         public string FirstName { get; set; }
@@ -22,7 +22,13 @@ namespace TrustFlow.Core.Models
         [BsonElement("Role")]
         public string Role { get; set; }
 
+        [BsonElement("RoleId")]
+        public string RoleId { get; set; }
+
         [BsonElement("IsActive")]
         public bool IsActive { get; set; } = true;
+
+        [BsonElement("DefaultPasswordChanged")]
+        public bool DefaultPasswordChanged { get; set; } = false;
     }
 }

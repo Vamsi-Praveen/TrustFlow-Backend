@@ -206,7 +206,7 @@ namespace TrustFlow.API.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new APIResponse(false, "Not authenticated."));
 
-            var result = await _userService.GetUserByIdAsync(userId);
+            var result = await _userService.GetCompleteUserById(userId);
             if (result == null)
                 return Unauthorized(new APIResponse(false, "User not found."));
 

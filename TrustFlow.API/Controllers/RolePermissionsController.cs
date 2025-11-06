@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Models;
 using TrustFlow.Core.Services;
 
 namespace TrustFlow.API.Controllers
 {
+    [Authorize(Roles ="Administrator")]
     [Route("api/[controller]")]
     [ApiController]
     public class RolePermissionsController : ControllerBase
@@ -53,6 +55,15 @@ namespace TrustFlow.API.Controllers
         public async Task<IActionResult> Get()
         {
             var result = await _rolePermissionService.GetRolePermissionsAsync();
+            return ToActionResult(result);
+        }
+
+        [HttpGet("list")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetRolesList()
+        {
+            var result = await _rolePermissionService.GetRolePermissionsListAsync();
             return ToActionResult(result);
         }
 
