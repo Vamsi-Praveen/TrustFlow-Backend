@@ -14,7 +14,6 @@ namespace TrustFlow.Core.Services
         private readonly IMongoCollection<SMTPConfig> _smtpConfig;
         private readonly ILogger<EmailService> _logger;
 
-
         public EmailService(ApplicationContext context, ILogger<EmailService> logger)
         {
             _logger = logger;
@@ -136,6 +135,48 @@ namespace TrustFlow.Core.Services
                 _logger.LogError("Unexpected error while sending email: " + ex.Message);
                 return new ServiceResult(false, "An internal error occurred", ex);
             }
+        }
+
+
+        public async Task<ServiceResult> SendRegistrationMailAsync(EmailRequest request)
+        {
+            var toEmail = request.To;
+            var userName = request.UserName;
+            var subject = "Welcome to TrustFlow!";
+            var body = $"<p>Dear {userName},</p>" +
+                       "<p>Welcome to TrustFlow! We're excited to have you on board.</p>" +
+                       "<p>Your default password is <strong>TrustFlow@123</strong></p>"+
+                       "<p>Best regards,<br/>The TrustFlow Team</p>";
+            var emailRequest = new SendEmailRequest
+            {
+                To = toEmail,
+                Subject = subject,
+                Body = body,
+                IsHtmlBody = true
+            };
+            return await SendEmailAsync(emailRequest);
+        }
+
+        public async Task<ServiceResult> SendPasswordResetMailAsync(EmailRequest request)
+        {
+            var toEmail = request.To;
+            var userName = request.UserName;
+            var token = Guid.NewGuid().ToString();
+            var subject = "TrustFlow Password Reset Request";
+            var url = $"https://trustflow.example.com/reset-password?token={token}";
+            var body = $"<p>Dear {userName},</p>" +
+                       "<p>We received a request to reset your password. Click the link below to reset it:</p>" +
+                       $"<p><a href='{url}'>Reset Password</a></p>" +
+                       "<p>If you did not request a password reset, please ignore this email.</p>" +
+                       "<p>Best regards,<br/>The TrustFlow Team</p>";
+            var emailRequest = new SendEmailRequest
+            {
+                To = toEmail,
+                Subject = subject,
+                Body = body,
+                IsHtmlBody = true
+            };
+            return await SendEmailAsync(emailRequest);
         }
 
     }

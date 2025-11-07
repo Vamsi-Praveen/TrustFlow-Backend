@@ -22,6 +22,17 @@ namespace TrustFlow.Core.DTOs
         public List<EmailAttachment>? Attachments { get; set; } = new List<EmailAttachment>();
     }
 
+    public class EmailRequest
+    {
+        [Required(ErrorMessage = "A 'To' email address is required.")]
+        [EmailAddress(ErrorMessage = "The 'To' field must be a valid email address.")]
+        public string To { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "A user name is required.")]
+        public string UserName { get; set; } = string.Empty;
+    }
+
+
     public class EmailAttachment
     {
         [Required]

@@ -56,5 +56,37 @@ namespace TrustFlow.API.Controllers
             var result = await _emailService.SendEmailAsync(request);
             return ToActionResult(result);
         }
+
+
+        [HttpPost("sendRegistrationMail")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> SendRegistrationMail([FromBody] EmailRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new APIResponse(false, "Invalid request data provided.", ModelState));
+            }
+
+            var result = await _emailService.SendRegistrationMailAsync(request);
+            return ToActionResult(result);
+        }
+
+
+        [HttpPost("sendPasswordResetMail")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> SendPasswordResetMail([FromBody] EmailRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new APIResponse(false, "Invalid request data provided.", ModelState));
+            }
+
+            var result = await _emailService.SendPasswordResetMailAsync(request);
+            return ToActionResult(result);
+        }
     }
 }
