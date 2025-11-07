@@ -24,6 +24,27 @@ namespace TrustFlow.Core.Services
             try
             {
                 var projects = await _projects.Find(_ => true).ToListAsync();
+
+                if (projects.Count != 0)
+                {
+                    var allUsers = await _users.Find(_ => true).ToListAsync();
+
+                    var userMap = allUsers.ToDictionary(u => u.Id, u => u);
+
+                    foreach (var project in projects)
+                    {
+                        if (project.LeadUserId != null && userMap.TryGetValue(project.LeadUserId, out var user))
+                        {
+                            project.LeadUserName = $"{user.FirstName} {user.LastName}".Trim();
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"LeadUser not found for id: {project.LeadUserId}");
+                            project.LeadUserName = "Unknown";
+                        }
+                    }
+                }
+
                 return new ServiceResult(true, "Projects retrieved successfully.", projects);
             }
             catch (Exception ex)

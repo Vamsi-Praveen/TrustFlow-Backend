@@ -13,6 +13,9 @@ namespace TrustFlow.Core.Models
         [BsonElement("CanCreateProject")]
         public bool CanCreateProject { get; set; }
 
+        [BsonElement("CanViewProject")]
+        public bool CanViewProject { get; set; }
+
         [BsonElement("CanEditProject")]
         public bool CanEditProject { get; set; }
 

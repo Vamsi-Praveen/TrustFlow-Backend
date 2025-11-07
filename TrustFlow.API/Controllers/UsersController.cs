@@ -10,7 +10,7 @@ using TrustFlow.Core.Services;
 
 namespace TrustFlow.API.Controllers
 {
-    [Authorize(Roles = "Administrator")]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
