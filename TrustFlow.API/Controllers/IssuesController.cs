@@ -7,7 +7,7 @@ namespace TrustFlow.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class IssuesController : ControllerBase
+    public class IssuesController : BaseController
     {
         private readonly IssueService _issueService;
         private readonly ILogger<IssuesController> _logger;

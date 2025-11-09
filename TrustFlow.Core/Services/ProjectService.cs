@@ -24,27 +24,6 @@ namespace TrustFlow.Core.Services
             try
             {
                 var projects = await _projects.Find(_ => true).ToListAsync();
-
-                if (projects.Count != 0)
-                {
-                    var allUsers = await _users.Find(_ => true).ToListAsync();
-
-                    var userMap = allUsers.ToDictionary(u => u.Id, u => u);
-
-                    foreach (var project in projects)
-                    {
-                        if (project.LeadUserId != null && userMap.TryGetValue(project.LeadUserId, out var user))
-                        {
-                            project.LeadUserName = $"{user.FirstName} {user.LastName}".Trim();
-                        }
-                        else
-                        {
-                            _logger.LogWarning($"LeadUser not found for id: {project.LeadUserId}");
-                            project.LeadUserName = "Unknown";
-                        }
-                    }
-                }
-
                 return new ServiceResult(true, "Projects retrieved successfully.", projects);
             }
             catch (Exception ex)
@@ -63,6 +42,7 @@ namespace TrustFlow.Core.Services
                     _logger.LogWarning("Attempted to retrieve project with null or empty ID.");
                     return new ServiceResult(false, "Project ID cannot be empty.");
                 }
+
                 var project = await _projects.Find(p => p.Id == id).FirstOrDefaultAsync();
 
                 if (project == null)
@@ -77,6 +57,34 @@ namespace TrustFlow.Core.Services
             {
                 _logger.LogError(ex, "Failed to retrieve project by ID: {ProjectId}", id);
                 return new ServiceResult(false, "An internal error occurred while retrieving the project.");
+            }
+        }
+
+        public async Task<ServiceResult> GetProjectsForUser(string userId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    _logger.LogWarning("Attempted to retrieve project with null or empty userid.");
+                    return new ServiceResult(false, "User id cannot be empty.");
+                }
+
+                var isLeadFilter = Builders<Project>.Filter.Eq(p => p.LeadUserId, userId);
+
+                var isMemberFilter = Builders<Project>.Filter.ElemMatch(p => p.Members, m => m.UserId == userId);
+
+                var combinedFilter = Builders<Project>.Filter.Or(isLeadFilter, isMemberFilter);
+
+                var projects = await _projects.Find(combinedFilter).ToListAsync();
+
+                _logger.LogInformation("Retrieved {Count} projects for user {UserId}.", projects.Count, userId);
+                return new ServiceResult(true, $"Projects for user '{userId}' retrieved successfully.", projects);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve project for user ID: {userid}", userId);
+                return new ServiceResult(false, "An internal error occurred while retrieving the project for user.");
             }
         }
 
@@ -111,6 +119,20 @@ namespace TrustFlow.Core.Services
                     _logger.LogWarning("Attempted to create project without a specified LeadUserId.");
                 }
 
+                if (!string.IsNullOrWhiteSpace(newProject.ManagerUserId))
+                {
+                    var manager = await _users.Find(u => u.Id == newProject.ManagerUserId).FirstOrDefaultAsync();
+                    if (manager == null)
+                    {
+                        _logger.LogWarning("Attempted to create project with invalid ManagerUserId: {ManagerUserId}", newProject.ManagerUserId);
+                        return new ServiceResult(false, $"The specified Manager User with ID '{newProject.ManagerUserId}' was not found.");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Attempted to create project without a specified ManagerUserID.");
+                }
+
                 newProject.CreatedAt = DateTime.UtcNow;
                 newProject.UpdatedAt = DateTime.UtcNow;
                 newProject.Members ??= new List<ProjectMember>();
@@ -138,7 +160,7 @@ namespace TrustFlow.Core.Services
                 var getResult = await GetProjectByIdAsync(id);
                 if (!getResult.Success)
                 {
-                    return getResult; // "Project not found" or other error
+                    return getResult;
                 }
                 var existingProject = (Project)getResult.Result;
 
@@ -162,6 +184,15 @@ namespace TrustFlow.Core.Services
                     if (leadUser == null)
                     {
                         return new ServiceResult(false, $"The specified new Lead User with ID '{updatedProject.LeadUserId}' was not found.");
+                    }
+                }
+
+                if (existingProject.ManagerUserId != updatedProject.ManagerUserId && !string.IsNullOrWhiteSpace(updatedProject.ManagerUserId))
+                {
+                    var manager = await _users.Find(u => u.Id == updatedProject.ManagerUserId).FirstOrDefaultAsync();
+                    if (manager == null)
+                    {
+                        return new ServiceResult(false, $"The specified new Manager User with ID '{updatedProject.ManagerUserId}' was not found.");
                     }
                 }
 
@@ -234,7 +265,6 @@ namespace TrustFlow.Core.Services
                     return new ServiceResult(false, $"User with ID '{newMember.UserId}' does not exist.");
                 }
 
-                // Check if user is already a member
                 var project = (Project)projectResult.Result;
                 if (project.Members.Any(m => m.UserId == newMember.UserId))
                 {

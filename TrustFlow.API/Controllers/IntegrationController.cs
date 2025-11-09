@@ -7,7 +7,7 @@ namespace TrustFlow.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class IntegrationController : ControllerBase
+    public class IntegrationController : BaseController
     {
         private readonly SlackService _slackService;
         private readonly TeamsService _teamsService;

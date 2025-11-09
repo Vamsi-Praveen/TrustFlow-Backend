@@ -9,7 +9,15 @@ namespace TrustFlow.Core.Models
         [BsonRepresentation(BsonType.ObjectId)]
         public string UserId { get; set; }
 
+        [BsonElement("RoleId")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string RoleId { get; set; }
+
         [BsonElement("Role")]
-        public string Role { get; set; }
+        public string RoleName { get; set; }
+
+        public string? UserName{ get; set; }
+
+        public string? UserEmail { get; set; }
     }
 }

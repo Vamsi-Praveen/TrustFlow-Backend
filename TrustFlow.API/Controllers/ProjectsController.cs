@@ -1,13 +1,15 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Models;
 using TrustFlow.Core.Services;
 
 namespace TrustFlow.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class ProjectsController : ControllerBase
+    public class ProjectsController : BaseController
     {
         private readonly ProjectService _projectService;
         private readonly ILogger<ProjectsController> _logger;
@@ -69,6 +71,17 @@ namespace TrustFlow.API.Controllers
         public async Task<IActionResult> Get(string id)
         {
             var result = await _projectService.GetProjectByIdAsync(id);
+            return ToActionResult(result);
+        }
+
+        [HttpGet("myprojects")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetMyProjects()
+        {
+            var result = await _projectService.GetProjectsForUser(Id);
             return ToActionResult(result);
         }
 

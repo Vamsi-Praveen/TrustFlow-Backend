@@ -13,7 +13,7 @@ namespace TrustFlow.API.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersController : ControllerBase
+    public class UsersController : BaseController
     {
         private readonly UserService _userService;
         private readonly ILogger<UsersController> _logger;

@@ -9,7 +9,7 @@ namespace TrustFlow.API.Controllers
     [Authorize(Roles ="Administrator")]
     [Route("api/[controller]")]
     [ApiController]
-    public class RolePermissionsController : ControllerBase
+    public class RolePermissionsController : BaseController
     {
         private readonly RolePermissionService _rolePermissionService;
         private readonly ILogger<RolePermissionsController> _logger;

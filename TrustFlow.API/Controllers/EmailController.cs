@@ -7,7 +7,7 @@ namespace TrustFlow.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class EmailController : ControllerBase
+    public class EmailController : BaseController
     {
         private readonly EmailService _emailService;
         private readonly ILogger<EmailController> _logger;
