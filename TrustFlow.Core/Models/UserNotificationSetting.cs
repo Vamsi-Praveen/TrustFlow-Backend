@@ -5,6 +5,12 @@ namespace TrustFlow.Core.Models
 {
     public class UserNotificationSetting : BaseEntity
     {
+        [BsonElement("UserId")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string UserId { get; set; }
+
+        [BsonElement("DefaultNotificationMethod")]
+        public string DefaultNotificationMethod { get; set; }
 
         [BsonElement("NotifyOnAssignedBug")]
         public bool NotifyOnAssignedBug { get; set; } = true;

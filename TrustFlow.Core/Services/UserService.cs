@@ -11,6 +11,7 @@ namespace TrustFlow.Core.Services
     {
         private readonly IMongoCollection<User> _users;
         private readonly IMongoCollection<RolePermission> _roles;
+        private readonly IMongoCollection<UserNotificationSetting> _userNotificationSettings;
         private readonly PasswordHelper _passwordHelper;
         private readonly ILogger<UserService> _logger;
 
@@ -18,6 +19,7 @@ namespace TrustFlow.Core.Services
         {
             _users = context.Users;
             _roles = context.RolePermissions;
+            _userNotificationSettings = context.UserNotificationSettings;
             _passwordHelper = passwordHelper;
             _logger = logger;
         }
@@ -294,6 +296,85 @@ namespace TrustFlow.Core.Services
                 _logger.LogError(ex, "Error during authentication for user: {Username}", username);
                 return new ServiceResult(false, "An internal error occurred during authentication.");
             }
+        }
+
+
+        public async Task<ServiceResult> ChangePasswordAsync(string userId,string oldPassword, string newPassword)
+        {
+            try
+            {
+                var user = await GetUserByIdAsync(userId);
+                if(!user.Success)
+                {
+                    return new ServiceResult(false, "User not found.");
+                }
+                var existingUser = (User)user.Result;
+                if(!_passwordHelper.VerifyPassword(oldPassword, existingUser.PasswordHash))
+                {
+                    return new ServiceResult(false, "Old password is incorrect.");
+                }
+
+                existingUser.PasswordHash = _passwordHelper.HashPassword(newPassword);
+
+                existingUser.UpdatedAt = DateTime.UtcNow;
+
+                await _users.FindOneAndUpdateAsync(userId => userId.Id == existingUser.Id,
+                    Builders<User>.Update
+                    .Set(u => u.PasswordHash, existingUser.PasswordHash)
+                    .Set(u => u.UpdatedAt, existingUser.UpdatedAt)
+                );
+
+                return new ServiceResult(true, "Password changed successfully.");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to change password for user ID: {UserId}", userId);
+                return new ServiceResult(false, "An internal error occurred while changing the password.");
+            }
+        }
+
+        public async Task<ServiceResult> UpdateUserNotificationConfig(UserNotificationSetting userNotificationSetting)
+        {
+            try
+            {
+                var user = await GetUserByIdAsync(userNotificationSetting.UserId);
+                if (!user.Success)
+                {
+                    return new ServiceResult(false, "User not found.");
+                }
+                var existingSetting = await _userNotificationSettings.Find(u => u.Id == userNotificationSetting.UserId).FirstOrDefaultAsync();
+
+                if (existingSetting == null)
+                {
+                    _logger.LogInformation("User Config not found for user ID: {UserId}", userNotificationSetting.UserId);
+                    return new ServiceResult(false, "User Config not found.");
+                }
+
+                existingSetting.DefaultNotificationMethod = userNotificationSetting.DefaultNotificationMethod;
+                existingSetting.NotifyOnAssignedBug = userNotificationSetting.NotifyOnAssignedBug;
+                existingSetting.NotifyOnStatusChange = userNotificationSetting.NotifyOnStatusChange;
+                existingSetting.NotifyOnNewComment = userNotificationSetting.NotifyOnNewComment;
+                existingSetting.UpdatedAt = DateTime.UtcNow;
+
+                await _userNotificationSettings.FindOneAndUpdateAsync(setting => setting.Id == existingSetting.Id,
+                    Builders<UserNotificationSetting>.Update
+                    .Set(u => u.DefaultNotificationMethod, existingSetting.DefaultNotificationMethod)
+                    .Set(u => u.NotifyOnAssignedBug, existingSetting.NotifyOnAssignedBug)
+                    .Set(u => u.NotifyOnStatusChange, existingSetting.NotifyOnStatusChange)
+                    .Set(u => u.NotifyOnNewComment, existingSetting.NotifyOnNewComment)
+                    .Set(u => u.UpdatedAt, existingSetting.UpdatedAt)
+                );
+
+                return new ServiceResult(true, "User notification settings updated successfully.", existingSetting);
+
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update notification settings for user ID: {UserId}", userNotificationSetting.UserId);
+                return new ServiceResult(false, "An internal error occurred while updating notification settings.");
+            }
+
         }
 
     }

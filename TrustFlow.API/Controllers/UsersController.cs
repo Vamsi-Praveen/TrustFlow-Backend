@@ -198,7 +198,6 @@ namespace TrustFlow.API.Controllers
 
         [HttpGet("me")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
-        [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetCurrentUser()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -211,6 +210,36 @@ namespace TrustFlow.API.Controllers
                 return Unauthorized(new APIResponse(false, "User not found."));
 
             return Ok(new APIResponse(true, "User retrieved successfully.", result));
+        }
+
+
+        [HttpPost("changepassword")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePassword changePasswordRequest)
+        {
+            var userId = Id;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new APIResponse(false, "Not authenticated."));
+
+            changePasswordRequest.UserId = userId;
+
+            var result = await _userService.ChangePasswordAsync(changePasswordRequest.UserId, changePasswordRequest.OldPassword, changePasswordRequest.NewPassword);
+
+            return ToActionResult(result);
+
+        }
+
+
+        [HttpPost("notificationsettings")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateNotificationSettings([FromBody] UserNotificationSetting notificationSettings)
+        {
+            var userId = Id;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new APIResponse(false, "Not authenticated."));
+            notificationSettings.UserId = userId;
+            var result = await _userService.UpdateUserNotificationConfig(notificationSettings);
+            return ToActionResult(result);
         }
     }
 }
