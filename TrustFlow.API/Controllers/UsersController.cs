@@ -130,6 +130,23 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
+        [HttpPatch("profile/{id}")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateProfile(string id, [FromBody] UpdateProfileDTO updatedUser)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new APIResponse(false, "Invalid user data provided.", ModelState));
+            }
+
+            var result = await _userService.UpdateProfileAsync(id, updatedUser);
+            return ToActionResult(result);
+        }
+
         [HttpDelete("{id}")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]

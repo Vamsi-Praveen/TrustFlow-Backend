@@ -2,6 +2,7 @@
 using MongoDB.Driver;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Data;
+using TrustFlow.Core.DTOs;
 using TrustFlow.Core.Helpers;
 using TrustFlow.Core.Models;
 
@@ -245,6 +246,58 @@ namespace TrustFlow.Core.Services
             {
                 _logger.LogError(ex, "Failed to update user with ID: {UserId}", id);
                 return new ServiceResult(false, "An internal error occurred while updating the user.");
+            }
+        }
+
+        public async Task<ServiceResult> UpdateProfileAsync(string id, UpdateProfileDTO updatedUser)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return new ServiceResult(false, "User ID is required for update.");
+                }
+
+                var getResult = await GetUserByIdAsync(id);
+                if (!getResult.Success)
+                {
+                    return getResult;
+                }
+
+                var existingUser = (User)getResult.Result;
+
+                if (!string.Equals(existingUser.Email, updatedUser.Email, StringComparison.OrdinalIgnoreCase))
+                {
+                    var duplicate = await _users
+                        .Find(u => u.Id != id && u.Email.ToLower() == updatedUser.Email.ToLower())
+                        .FirstOrDefaultAsync();
+
+                    if (duplicate != null)
+                    {
+                        return new ServiceResult(false, $"The email '{updatedUser.Email}' is already in use.");
+                    }
+                }
+
+                var update = Builders<User>.Update
+                    .Set(u => u.Email, updatedUser.Email)
+                    .Set(u => u.FirstName, updatedUser.FirstName)
+                    .Set(u => u.LastName, updatedUser.LastName)
+                    .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+                var result = await _users.UpdateOneAsync(u => u.Id == id, update);
+
+                if (result.ModifiedCount > 0)
+                {
+                    _logger.LogInformation("Successfully updated profile for user: {UserId}", id);
+                    return new ServiceResult(true, "Profile updated successfully.");
+                }
+
+                return new ServiceResult(false, "No changes detected, profile remains the same.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user profile: {UserId}", id);
+                return new ServiceResult(false, "An internal error occurred while updating the profile.");
             }
         }
 
