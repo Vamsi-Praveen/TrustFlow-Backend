@@ -78,6 +78,8 @@ namespace TrustFlow.API
             builder.Services.AddScoped<TeamsService>();
             builder.Services.AddScoped<EmailService>();
 
+            builder.Services.AddScoped<ActivityService>();
+
             var app = builder.Build();
 
             //Seed data

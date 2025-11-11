@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using TrustFlow.Core.Models;
 
 namespace TrustFlow.API.Controllers
 {
@@ -18,6 +19,12 @@ namespace TrustFlow.API.Controllers
         public string AccessToken
         {
             get { return HttpContext.User.Claims.FirstOrDefault(c => c.Type == "Access_Token").Value; }
+        }
+
+        [NonAction]
+        protected virtual void SendLog(ActivityLog log)
+        {
+            // Intentionally left blank for derived controllers to implement logging if needed.
         }
     }
 }
