@@ -440,7 +440,7 @@ namespace TrustFlow.Core.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to update notification settings for user ID: {UserId}", userNotificationSetting.UserId);
+                _logger.LogError(ex, "Failed to update notification settings for user ID: {UserId}", userId);
                 return new ServiceResult(false, "An internal error occurred while updating notification settings.");
             }
 
