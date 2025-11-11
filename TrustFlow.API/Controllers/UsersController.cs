@@ -240,7 +240,7 @@ namespace TrustFlow.API.Controllers
 
             changePasswordRequest.UserId = userId;
 
-            var result = await _userService.ChangePasswordAsync(changePasswordRequest.UserId, changePasswordRequest.OldPassword, changePasswordRequest.NewPassword);
+            var result = await _userService.ChangePasswordAsync(changePasswordRequest.UserId, changePasswordRequest.CurrentPassword, changePasswordRequest.NewPassword);
 
             return ToActionResult(result);
 
