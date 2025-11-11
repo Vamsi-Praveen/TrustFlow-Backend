@@ -247,15 +247,33 @@ namespace TrustFlow.API.Controllers
         }
 
 
-        [HttpPost("notificationsettings")]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateNotificationSettings([FromBody] UserNotificationSetting notificationSettings)
+        [HttpPut("notificationsettings")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateNotificationSettings([FromBody] UserNotification notificationSettings)
         {
             var userId = Id;
             if (string.IsNullOrEmpty(userId))
-                return Unauthorized(new APIResponse(false, "Not authenticated."));
-            notificationSettings.UserId = userId;
-            var result = await _userService.UpdateUserNotificationConfig(notificationSettings);
+                return Unauthorized(new APIResponse(false, "User Not authenticated."));
+            var result = await _userService.UpdateUserNotificationConfig(userId,notificationSettings);
+            return ToActionResult(result);
+        }
+
+        [HttpGet("notificationsettings")]
+        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> FetchUserNotificationSettings()
+        {
+            var userId = Id;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new APIResponse(false, "User Not authenticated."));
+            }
+            var result = await _userService.GetUserNotificationConfig(userId);
             return ToActionResult(result);
         }
     }

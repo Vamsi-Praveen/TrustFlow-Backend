@@ -182,8 +182,22 @@ namespace TrustFlow.Core.Services
                 newUser.CreatedAt = DateTime.UtcNow;
                 newUser.UpdatedAt = DateTime.UtcNow;
                 newUser.IsActive = true;
-
                 await _users.InsertOneAsync(newUser);
+
+                var userID = newUser.Id;
+                var notificationConfig = new UserNotificationSetting()
+                {
+                    UserId = userID,
+                    DefaultNotificationMethod = "Email",
+                    NotifyOnAssignedBug = true,
+                    NotifyOnStatusChange = true,
+                    NotifyOnNewComment = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+
+                await _userNotificationSettings.InsertOneAsync(notificationConfig);
+
                 _logger.LogInformation("Successfully created new user: {Username}", newUser.Username);
                 return new ServiceResult(true, "User created successfully.", newUser);
             }
@@ -192,7 +206,7 @@ namespace TrustFlow.Core.Services
                 _logger.LogError(ex, "Failed to create user: {Username}", newUser.Username);
                 return new ServiceResult(false, "An internal error occurred while creating the user.");
             }
-        }
+                                         }
 
         public async Task<ServiceResult> UpdateAsync(string id, User updatedUser)
         {
@@ -352,17 +366,17 @@ namespace TrustFlow.Core.Services
         }
 
 
-        public async Task<ServiceResult> ChangePasswordAsync(string userId,string oldPassword, string newPassword)
+        public async Task<ServiceResult> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
         {
             try
             {
                 var user = await GetUserByIdAsync(userId);
-                if(!user.Success)
+                if (!user.Success)
                 {
                     return new ServiceResult(false, "User not found.");
                 }
                 var existingUser = (User)user.Result;
-                if(!_passwordHelper.VerifyPassword(oldPassword, existingUser.PasswordHash))
+                if (!_passwordHelper.VerifyPassword(oldPassword, existingUser.PasswordHash))
                 {
                     return new ServiceResult(false, "Old password is incorrect.");
                 }
@@ -387,20 +401,22 @@ namespace TrustFlow.Core.Services
             }
         }
 
-        public async Task<ServiceResult> UpdateUserNotificationConfig(UserNotificationSetting userNotificationSetting)
+        public async Task<ServiceResult> UpdateUserNotificationConfig(string userId,UserNotification userNotificationSetting)
         {
             try
             {
-                var user = await GetUserByIdAsync(userNotificationSetting.UserId);
+   
+                var user = await GetUserByIdAsync(userId);
                 if (!user.Success)
                 {
                     return new ServiceResult(false, "User not found.");
+                    return new ServiceResult(false, "User not found.");
                 }
-                var existingSetting = await _userNotificationSettings.Find(u => u.Id == userNotificationSetting.UserId).FirstOrDefaultAsync();
+                var existingSetting = await _userNotificationSettings.Find(u => u.Id == userId).FirstOrDefaultAsync();
 
                 if (existingSetting == null)
                 {
-                    _logger.LogInformation("User Config not found for user ID: {UserId}", userNotificationSetting.UserId);
+                    _logger.LogInformation("User Config not found for user ID: {UserId}", userId);
                     return new ServiceResult(false, "User Config not found.");
                 }
 
@@ -422,10 +438,32 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(true, "User notification settings updated successfully.", existingSetting);
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to update notification settings for user ID: {UserId}", userNotificationSetting.UserId);
                 return new ServiceResult(false, "An internal error occurred while updating notification settings.");
+            }
+
+        }
+
+        public async Task<ServiceResult> GetUserNotificationConfig(string userId)
+        {
+            try
+            {
+                var notificationConfig = await _userNotificationSettings.Find(u => u.UserId == userId).FirstOrDefaultAsync();
+
+                if (notificationConfig == null)
+                {
+                    _logger.LogError($"NotificationConfig is not found for the user : {userId}");
+                    return new ServiceResult(false, "NotificationConfig is not found for the user");
+                }
+
+                return new ServiceResult(true, "Notification config fetched Successfully", notificationConfig);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch notification settings for user ID: {UserId}", userId);
+                return new ServiceResult(false, "An internal error occurred while fetching notification settings.");
             }
 
         }
