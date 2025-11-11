@@ -410,9 +410,8 @@ namespace TrustFlow.Core.Services
                 if (!user.Success)
                 {
                     return new ServiceResult(false, "User not found.");
-                    return new ServiceResult(false, "User not found.");
                 }
-                var existingSetting = await _userNotificationSettings.Find(u => u.Id == userId).FirstOrDefaultAsync();
+                var existingSetting = await _userNotificationSettings.Find(u => u.UserId == userId).FirstOrDefaultAsync();
 
                 if (existingSetting == null)
                 {
