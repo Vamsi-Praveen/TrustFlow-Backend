@@ -20,11 +20,27 @@ namespace TrustFlow.Core.Services
             _smtpConfig = context.SMTPConfig;
         }
 
+        public async Task<ServiceResult> GetConfig()
+        {
+            try
+            {
+                var config = await _smtpConfig.Find(s => s.IsActive == true).FirstOrDefaultAsync();
+               
+                return new ServiceResult(true, "SMTP Config retrieved successfully.", config);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve smtp config.");
+                return new ServiceResult(false, "An internal error occurred while retrieving email config.",null);
+            }
+        }
+
         public async Task<ServiceResult> TestSMTP()
         {
             try
             {
-                var smtp = await _smtpConfig.Find(s => s.IsActive).FirstOrDefaultAsync();
+                var res = await GetConfig();
+                var smtp = (SMTPConfig)res?.Result;
 
                 if (smtp == null)
                 {

@@ -28,7 +28,7 @@ namespace TrustFlow.Core.Services
         {
             try
             {
-                var config = await _config.Find(_ => true).ToListAsync();
+                var config = await _config.Find(t=>t.IsActive == true).FirstOrDefaultAsync();
                 return new ServiceResult(true, "Teams Config retrieved successfully.", config);
             }
             catch (Exception ex)

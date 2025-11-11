@@ -77,7 +77,8 @@ namespace TrustFlow.API
             builder.Services.AddScoped<SlackService>();
             builder.Services.AddScoped<TeamsService>();
             builder.Services.AddScoped<EmailService>();
-
+            builder.Services.AddScoped<SystemSettingService>();
+            builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<ActivityService>();
 
             var app = builder.Build();

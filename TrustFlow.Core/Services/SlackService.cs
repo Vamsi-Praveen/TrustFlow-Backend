@@ -28,7 +28,7 @@ namespace TrustFlow.Core.Services
         {
             try
             {
-                var config = await _config.Find(_ => true).ToListAsync();
+                var config = await _config.Find(c=>c.IsActive == true).FirstOrDefaultAsync();
                 return new ServiceResult(true, "Slack Config retrieved successfully.", config);
             }
             catch (Exception ex)
