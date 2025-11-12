@@ -52,7 +52,7 @@ namespace TrustFlow.Core.Services
         }
 
         // -----------------------
-        // Enrich Issues to DTO
+        // Dictionary-based enrichment
         // -----------------------
         private async Task<List<IssueDto>> EnrichIssues(List<Issue> issues)
         {
@@ -101,10 +101,8 @@ namespace TrustFlow.Core.Services
         {
             try
             {
-                var typeObj = await _issueTypes.Find(Builders<IssueType>.Filter.Eq("_id", new ObjectId(newIssue.Type)))
-                    .FirstOrDefaultAsync();
-                if (typeObj == null)
-                    return new ServiceResult(false, "Invalid Issue Type.", null);
+                var typeObj = await _issueTypes.Find(Builders<IssueType>.Filter.Eq("_id", new ObjectId(newIssue.Type))).FirstOrDefaultAsync();
+                if (typeObj == null) return new ServiceResult(false, "Invalid Issue Type.", null);
 
                 var nextSeq = await GetNextSequenceValue(typeObj.Name.ToUpper());
                 newIssue.IssueId = $"{typeObj.Name.ToUpper()}-{nextSeq}";
@@ -113,15 +111,9 @@ namespace TrustFlow.Core.Services
 
                 await _issues.InsertOneAsync(newIssue);
 
-
-                await _counters.UpdateOneAsync(
-                    Builders<Counter>.Filter.Eq(c => c.Identifier, typeObj.Name.ToUpper()),
-                    Builders<Counter>.Update.Set(c => c.UpdatedAt, DateTime.UtcNow)
-                );
-
                 var enriched = (await EnrichIssues(new List<Issue> { newIssue })).FirstOrDefault();
-
                 _logger.LogInformation("Issue {IssueId} created successfully.", newIssue.IssueId);
+
                 return new ServiceResult(true, "Issue raised successfully.", enriched);
             }
             catch (Exception ex)
@@ -132,53 +124,16 @@ namespace TrustFlow.Core.Services
         }
 
         // -----------------------
-        // Get Project-wise Issues
+        // Edit Issue
         // -----------------------
-        public async Task<ServiceResult> GetIssuesByProjectAsync(string projectId)
+        public async Task<ServiceResult> EditIssue(Issue updatedIssue)
         {
-            try
-            {
-                var issues = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.ProjectId, projectId)).ToListAsync();
-                var enriched = await EnrichIssues(issues);
-                return new ServiceResult(true, "Project issues retrieved successfully.", enriched);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving issues for project {ProjectId}.", projectId);
-                return new ServiceResult(false, "Error retrieving project issues.", null);
-            }
-        }
+            var filter = Builders<Issue>.Filter.Eq(i => i.Id, updatedIssue.Id);
+            var result = await _issues.ReplaceOneAsync(filter, updatedIssue);
+            if (result.MatchedCount == 0) return new ServiceResult(false, "Issue not found.", null);
 
-        // -----------------------
-        // Get Issues Reported by User
-        // -----------------------
-        public async Task<ServiceResult> GetIssuesReportedByUserAsync(string userId)
-        {
-            var issues = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.ReporterUserId, userId)).ToListAsync();
-            var enriched = await EnrichIssues(issues);
-            return new ServiceResult(true, "Issues reported by user retrieved successfully.", enriched);
-        }
-
-        // -----------------------
-        // Get Issues Assigned to User
-        // -----------------------
-        public async Task<ServiceResult> GetIssuesAssignedToUserAsync(string userId)
-        {
-            var issues = await _issues.Find(Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId)).ToListAsync();
-            var enriched = await EnrichIssues(issues);
-            return new ServiceResult(true, "Issues assigned to user retrieved successfully.", enriched);
-        }
-
-        // -----------------------
-        // Get Issue Details
-        // -----------------------
-        public async Task<ServiceResult> GetIssueDetailsAsync(string issueId)
-        {
-            var issue = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.Id, issueId)).FirstOrDefaultAsync();
-            if (issue == null) return new ServiceResult(false, "Issue not found.", null);
-
-            var enriched = (await EnrichIssues(new List<Issue> { issue })).FirstOrDefault();
-            return new ServiceResult(true, "Issue details retrieved successfully.", enriched);
+            var enriched = (await EnrichIssues(new List<Issue> { updatedIssue })).FirstOrDefault();
+            return new ServiceResult(true, "Issue updated successfully.", enriched);
         }
 
         // -----------------------
@@ -208,18 +163,58 @@ namespace TrustFlow.Core.Services
         }
 
         // -----------------------
-        // Project-wise Analytics
+        // Get Issue Details
+        // -----------------------
+        public async Task<ServiceResult> GetIssueDetailsAsync(string issueId)
+        {
+            var issue = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.Id, issueId)).FirstOrDefaultAsync();
+            if (issue == null) return new ServiceResult(false, "Issue not found.", null);
+
+            var enriched = (await EnrichIssues(new List<Issue> { issue })).FirstOrDefault();
+            return new ServiceResult(true, "Issue details retrieved successfully.", enriched);
+        }
+
+        // -----------------------
+        // Get Issues By Project (Aggregation)
+        // -----------------------
+        public async Task<ServiceResult> GetIssuesByProjectAsync(string projectId)
+        {
+            var aggregation = await _issues.Aggregate()
+                .Match(i => i.ProjectId == projectId)
+                .ToListAsync();
+
+            var enriched = await EnrichIssues(aggregation);
+            return new ServiceResult(true, "Project issues retrieved successfully.", enriched);
+        }
+
+        // -----------------------
+        // Get Issues Reported / Assigned by User (Aggregation)
+        // -----------------------
+        public async Task<ServiceResult> GetIssuesReportedByUserAsync(string userId)
+        {
+            var aggregation = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.ReporterUserId, userId)).ToListAsync();
+            var enriched = await EnrichIssues(aggregation);
+            return new ServiceResult(true, "Issues reported by user retrieved successfully.", enriched);
+        }
+
+        public async Task<ServiceResult> GetIssuesAssignedToUserAsync(string userId)
+        {
+            var aggregation = await _issues.Find(Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId)).ToListAsync();
+            var enriched = await EnrichIssues(aggregation);
+            return new ServiceResult(true, "Issues assigned to user retrieved successfully.", enriched);
+        }
+
+        // -----------------------
+        // Project-wise Analytics (Aggregation)
         // -----------------------
         public async Task<ServiceResult> ProjectWiseIssueAnalytics()
         {
             try
             {
-                // Fetch all statuses and categorize
                 var allStatuses = await _issueStatus.Find(Builders<IssueStatus>.Filter.Empty).ToListAsync();
                 var openStatusIds = allStatuses.Where(s => s.Name != "Closed" && s.Name != "Resolved").Select(s => s.Id).ToList();
                 var closedStatusIds = allStatuses.Where(s => s.Name == "Closed" || s.Name == "Resolved").Select(s => s.Id).ToList();
 
-                // Aggregate by project
                 var aggregation = await _issues.Aggregate()
                     .Group(i => i.ProjectId, g => new
                     {
@@ -230,7 +225,6 @@ namespace TrustFlow.Core.Services
                     })
                     .ToListAsync();
 
-                // Map to DTO
                 var result = aggregation.Select(a => new ProjectIssueAnalyticsDto
                 {
                     ProjectId = a.ProjectId,
@@ -239,43 +233,39 @@ namespace TrustFlow.Core.Services
                     ClosedIssues = a.Closed
                 }).ToList();
 
-                _logger.LogInformation("Project-wise issue analytics retrieved successfully.");
                 return new ServiceResult(true, "Project-wise analytics retrieved successfully.", result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving project-wise issue analytics.");
-                return new ServiceResult(false, "Error retrieving project-wise issue analytics.", null);
+                _logger.LogError(ex, "Error retrieving project-wise analytics.");
+                return new ServiceResult(false, "Error retrieving project-wise analytics.", null);
             }
         }
 
         // -----------------------
-        // User-wise Analytics
+        // User-wise Analytics (Aggregation)
         // -----------------------
         public async Task<ServiceResult> UserWiseIssueAnalytics()
         {
             try
             {
-                // Fetch all statuses and categorize
                 var allStatuses = await _issueStatus.Find(Builders<IssueStatus>.Filter.Empty).ToListAsync();
                 var openStatusIds = allStatuses.Where(s => s.Name != "Closed" && s.Name != "Resolved").Select(s => s.Id).ToList();
                 var closedStatusIds = allStatuses.Where(s => s.Name == "Closed" || s.Name == "Resolved").Select(s => s.Id).ToList();
 
-                // Aggregate by assignee
                 var aggregation = await _issues.Aggregate()
-                    .Unwind<Issue, BsonDocument>(i => i.AssigneeUserIds) // flatten Assignees
+                    .Unwind<Issue, BsonDocument>(i => i.AssigneeUserIds)
                     .Group(new BsonDocument
                     {
-                { "_id", "$AssigneeUserIds" },
-                { "Total", new BsonDocument("$sum", 1) },
-                { "Open", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
-                    { new BsonDocument("$in", new BsonArray { "$Status", new BsonArray(openStatusIds) }), 1, 0 })) },
-                { "Closed", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
-                    { new BsonDocument("$in", new BsonArray { "$Status", new BsonArray(closedStatusIds) }), 1, 0 })) }
+                        { "_id", "$AssigneeUserIds" },
+                        { "Total", new BsonDocument("$sum", 1) },
+                        { "Open", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
+                            { new BsonDocument("$in", new BsonArray { "$Status", new BsonArray(openStatusIds) }), 1, 0 })) },
+                        { "Closed", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
+                            { new BsonDocument("$in", new BsonArray { "$Status", new BsonArray(closedStatusIds) }), 1, 0 })) }
                     })
                     .ToListAsync();
 
-                // Enrich with user names
                 var userIds = aggregation.Select(a => a["_id"].AsString).ToList();
                 var users = await _users.Find(Builders<User>.Filter.In(u => u.Id, userIds)).ToListAsync();
                 var userMap = users.ToDictionary(u => u.Id, u => u.Username ?? u.Email ?? "Unknown");
@@ -289,7 +279,6 @@ namespace TrustFlow.Core.Services
                     ClosedIssues = a["Closed"].AsInt32
                 }).ToList();
 
-                _logger.LogInformation("User-wise issue analytics retrieved successfully.");
                 return new ServiceResult(true, "User-wise analytics retrieved successfully.", result);
             }
             catch (Exception ex)
@@ -298,7 +287,5 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "Error retrieving user-wise issue analytics.", null);
             }
         }
-
-
     }
 }
