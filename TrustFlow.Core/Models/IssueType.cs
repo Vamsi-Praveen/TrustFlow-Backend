@@ -12,8 +12,5 @@ namespace TrustFlow.Core.Models
 
         [BsonElement("IsDefault")]
         public bool IsDefault { get; set; } = false;
-
-        [BsonElement("ProjectIds")]
-        public List<string> ProjectIds { get; set; } = new List<string>();
     }
 }
