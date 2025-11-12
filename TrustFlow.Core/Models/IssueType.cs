@@ -2,7 +2,7 @@
 
 namespace TrustFlow.Core.Models
 {
-    public class IssueType
+    public class IssueType : BaseEntity
     {
         [BsonElement("Name")]
         public string Name { get; set; }

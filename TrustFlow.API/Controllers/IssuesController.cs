@@ -72,19 +72,19 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-        [HttpPut]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> UpdateIssue([FromBody] Issue updatedIssue)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new APIResponse(false, "Invalid issue data provided.", ModelState));
-            }
-            var result = await _issueService.EditIssue(updatedIssue);
-            return ToActionResult(result);
-        }
+        //[HttpPut]
+        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
+        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        //public async Task<IActionResult> UpdateIssue([FromBody] Issue updatedIssue)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(new APIResponse(false, "Invalid issue data provided.", ModelState));
+        //    }
+        //    var result = await _issueService.EditIssue(updatedIssue);
+        //    return ToActionResult(result);
+        //}
 
         [HttpPut("{id}/status")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
@@ -110,12 +110,12 @@ namespace TrustFlow.API.Controllers
         }
 
 
-        [HttpGet("analytics")]
-        public async Task<IActionResult> GetGlobalAnalytics()
-        {
-            var result = await _issueService.IssueAnalytics();
-            return ToActionResult(result);
-        }
+        //[HttpGet("analytics")]
+        //public async Task<IActionResult> GetGlobalAnalytics()
+        //{
+        //    var result = await _issueService.IssueAnalytics();
+        //    return ToActionResult(result);
+        //}
 
         [HttpGet("analytics/project-wise")]
         public async Task<IActionResult> GetProjectWiseAnalytics()
@@ -124,27 +124,27 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-        [HttpGet("project/{projectId}/analytics")]
-        public async Task<IActionResult> GetProjectAnalytics(string projectId)
-        {
-            var result = await _issueService.ProjectIssueAnalytics(projectId);
-            return ToActionResult(result);
-        }
+        //[HttpGet("project/{projectId}/analytics")]
+        //public async Task<IActionResult> GetProjectAnalytics(string projectId)
+        //{
+        //    var result = await _issueService.ProjectWiseIssueAnalytics(projectId);
+        //    return ToActionResult(result);
+        //}
 
 
-        [HttpGet("project/{projectId}")]
-        public async Task<IActionResult> GetIssuesByProject(string projectId)
-        {
-            var result = await _issueService.GetIssuesByProjectAsync(projectId);
-            return ToActionResult(result);
-        }
+        //[HttpGet("project/{projectId}")]
+        //public async Task<IActionResult> GetIssuesByProject(string projectId)
+        //{
+        //    var result = await _issueService.oss(projectId);
+        //    return ToActionResult(result);
+        //}
 
-        [HttpGet("project/{projectId}/status/{status}")]
-        public async Task<IActionResult> GetProjectIssuesByStatus(string projectId, string status)
-        {
-            var result = await _issueService.GetProjectIssuesByStatus(projectId, status);
-            return ToActionResult(result);
-        }
+        //[HttpGet("project/{projectId}/status/{status}")]
+        //public async Task<IActionResult> GetProjectIssuesByStatus(string projectId, string status)
+        //{
+        //    var result = await _issueService.GetProjectIssuesByStatus(projectId, status);
+        //    return ToActionResult(result);
+        //}
 
         [HttpGet("user/{userId}/assigned")]
         public async Task<IActionResult> GetIssuesAssignedToUser(string userId)
@@ -160,11 +160,11 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-        [HttpGet("user/{userId}/open-count")]
-        public async Task<IActionResult> GetOpenIssuesCountForUser(string userId)
-        {
-            var result = await _issueService.GetOpenIssuesCountByUserAsync(userId);
-            return ToActionResult(result);
-        }
+        //[HttpGet("user/{userId}/open-count")]
+        //public async Task<IActionResult> GetOpenIssuesCountForUser(string userId)
+        //{
+        //    var result = await _issueService.GetOpenIssuesCountByUserAsync(userId);
+        //    return ToActionResult(result);
+        //}
     }
 }

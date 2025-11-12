@@ -112,6 +112,13 @@ namespace TrustFlow.Core.Services
                 newIssue.UpdatedAt = DateTime.UtcNow;
 
                 await _issues.InsertOneAsync(newIssue);
+
+
+                await _counters.UpdateOneAsync(
+                    Builders<Counter>.Filter.Eq(c => c.Identifier, typeObj.Name.ToUpper()),
+                    Builders<Counter>.Update.Set(c => c.UpdatedAt, DateTime.UtcNow)
+                );
+
                 var enriched = (await EnrichIssues(new List<Issue> { newIssue })).FirstOrDefault();
 
                 _logger.LogInformation("Issue {IssueId} created successfully.", newIssue.IssueId);
@@ -271,7 +278,7 @@ namespace TrustFlow.Core.Services
                 // Enrich with user names
                 var userIds = aggregation.Select(a => a["_id"].AsString).ToList();
                 var users = await _users.Find(Builders<User>.Filter.In(u => u.Id, userIds)).ToListAsync();
-                var userMap = users.ToDictionary(u => u.Id, u => u.FullName ?? u.Email ?? "Unknown");
+                var userMap = users.ToDictionary(u => u.Id, u => u.Username ?? u.Email ?? "Unknown");
 
                 var result = aggregation.Select(a => new
                 {
