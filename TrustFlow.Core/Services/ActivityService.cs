@@ -1,12 +1,5 @@
 ﻿using Confluent.Kafka;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Models;
 
@@ -16,7 +9,7 @@ namespace TrustFlow.Core.Services
     {
         public ActivityService()
         {
-            
+
 
         }
 
@@ -64,20 +57,16 @@ namespace TrustFlow.Core.Services
                 string topic = "test-topic";
                 var partition = new TopicPartition(topic, new Partition(0));
 
-                // Assign instead of Subscribe so we control where we read from
                 consumer.Assign(partition);
 
-                // Find the latest offset
                 var offsets = consumer.QueryWatermarkOffsets(partition, TimeSpan.FromSeconds(3));
 
-                long latest = offsets.High.Value;       // Next offset to be written
-                long earliest = offsets.Low.Value;      // Oldest retained offset
+                long latest = offsets.High.Value;      
+                long earliest = offsets.Low.Value;     
                 long start = Math.Max(latest - count, earliest);
 
-                // Jump directly to where we want to start
                 consumer.Seek(new TopicPartitionOffset(partition, new Offset(start)));
 
-                // Read up to 'count' messages
                 for (int i = 0; i < count; i++)
                 {
                     var cr = consumer.Consume(TimeSpan.FromMilliseconds(500));
@@ -95,7 +84,7 @@ namespace TrustFlow.Core.Services
 
                 return new ServiceResult(true, "Succesfully Recieved logs", logs);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new ServiceResult(false, "An Internal error occured - Failed to get logs");
             }
@@ -114,7 +103,7 @@ namespace TrustFlow.Core.Services
             consumer.Subscribe("test-topic");
 
             var logs = new List<ActivityLog>();
-            var timeout = DateTime.UtcNow.AddSeconds(3); // Don’t block too long
+            var timeout = DateTime.UtcNow.AddSeconds(3);
 
             while (logs.Count < count && DateTime.UtcNow < timeout)
             {

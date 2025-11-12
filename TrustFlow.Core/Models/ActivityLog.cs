@@ -14,23 +14,23 @@ namespace TrustFlow.Core.Models
 
         [BsonElement("userId")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string? UserId { get; set; } // Nullable: system actions")]
+        public string? UserId { get; set; } 
 
         [BsonElement("entityType")]
-        public string EntityType { get; set; } = string.Empty; // e.g. "Bug", "Comment", "Project"
+        public string EntityType { get; set; } = string.Empty; 
 
         [BsonElement("entityId")]
         [BsonRepresentation(BsonType.ObjectId)]
         public string EntityId { get; set; } = string.Empty;
 
         [BsonElement("actionType")]
-        public string ActionType { get; set; } = string.Empty; // e.g. "CREATE", "UPDATE", "DELETE", etc.
+        public string ActionType { get; set; } = string.Empty; 
 
         [BsonElement("oldValue")]
-        public string? OldValue { get; set; } // JSON string
+        public string? OldValue { get; set; } 
 
         [BsonElement("newValue")]
-        public string? NewValue { get; set; } // JSON string
+        public string? NewValue { get; set; } 
 
         [BsonElement("description")]
         public string Description { get; set; } = string.Empty;

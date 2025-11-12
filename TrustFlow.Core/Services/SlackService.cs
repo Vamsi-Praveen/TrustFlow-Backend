@@ -69,6 +69,47 @@ namespace TrustFlow.Core.Services
             }
         }
 
+        public async Task<ServiceResult> UpdateSlackConfig(SlackConfig config)
+        {
+            try
+            {
+                var existingSlackResult = await GetSlackDetailsAsync();
+
+                if (!existingSlackResult.Success || existingSlackResult.Result is not SlackConfig existingSlack)
+                {
+                    _logger.LogError("Slack configuration not found in system settings.");
+                    return new ServiceResult(false, "Slack configuration not found.");
+                }
+
+                var filter = Builders<SlackConfig>.Filter.Eq(i => i.Id, existingSlack.Id);
+                var update = Builders<SlackConfig>.Update
+                    .Set(x => x.SlackChannelName, config.SlackChannelName)
+                    .Set(x => x.SlackBotToken, config.SlackBotToken)
+                    .Set(x => x.SlackBotName, config.SlackBotName)
+                    .Set(x => x.SlackAppName, config.SlackAppName)
+                    .Set(x => x.SlackWebhookURL, config.SlackWebhookURL)
+                    .Set(x => x.SlackBaseAddress, config.SlackBaseAddress)
+                    .Set(x => x.IsActive, true)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+                var result = await _config.UpdateOneAsync(filter, update);
+
+                if (result.ModifiedCount > 0)
+                {
+                    _logger.LogInformation("Slack configuration updated successfully.");
+                    return new ServiceResult(true, "Slack configuration updated successfully.");
+                }
+
+                return new ServiceResult(false, "No changes were made to the Slack configuration.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while updating Slack configuration in System Settings.");
+                return new ServiceResult(false, "An internal error occurred while updating Slack configuration.");
+            }
+        }
+
+
         public async Task<ServiceResult> SendSlackNotification(Notification notification)
         {
             try
@@ -209,6 +250,7 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred while sending the Slack notification");
             }
         }
+
 
     }
 }

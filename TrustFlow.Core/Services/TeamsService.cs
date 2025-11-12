@@ -111,6 +111,47 @@ namespace TrustFlow.Core.Services
             return new ServiceResult(true, "Succesfully Retrived UserId", new { UserId = doc.RootElement.GetProperty("id").GetString() });
         }
 
+        public async Task<ServiceResult> UpdateTeamsConfig(TeamsConfig config)
+        {
+            try
+            {
+                var existingTeamsResult = await GetTeamsDetailsAsync();
+
+                if (!existingTeamsResult.Success || existingTeamsResult.Result is not TeamsConfig existingTeams)
+                {
+                    _logger.LogError("Teams configuration not found in system settings.");
+                    return new ServiceResult(false, "Teams configuration not found.");
+                }
+
+                var filter = Builders<TeamsConfig>.Filter.Eq(i => i.Id, existingTeams.Id);
+                var update = Builders<TeamsConfig>.Update
+                    .Set(x => x.TenantId, config.TenantId)
+                    .Set(x => x.ClientId, config.ClientId)
+                    .Set(x => x.ClientSecret, config.ClientSecret)
+                    .Set(x => x.Scope, config.Scope)
+                    .Set(x => x.GrantType, config.GrantType)
+                    .Set(x => x.TokenUrl, config.TokenUrl)
+                    .Set(x => x.IsActive, true)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+                var result = await _config.UpdateOneAsync(filter, update);
+
+                if (result.ModifiedCount > 0)
+                {
+                    _logger.LogInformation("Teams configuration updated successfully.");
+                    return new ServiceResult(true, "Teams configuration updated successfully.");
+                }
+
+                return new ServiceResult(false, "No changes were made to the Teams configuration.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while updating Teams configuration in System Settings.");
+                return new ServiceResult(false, "An internal error occurred while updating Teams configuration.");
+            }
+        }
+
+
         public async Task<ServiceResult> SendDirectMessageAsync(Notification notification)
         {
             var res = await GetAccessTokenAsync();

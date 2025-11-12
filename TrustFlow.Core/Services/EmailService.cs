@@ -76,6 +76,49 @@ namespace TrustFlow.Core.Services
             }
         }
 
+        public async Task<ServiceResult> UpdateSmtpConfig(SMTPConfig config)
+        {
+            try
+            {
+                var existingSmtpResult = await GetConfig();
+
+                if (!existingSmtpResult.Success || existingSmtpResult.Result is not SMTPConfig existingSmtp)
+                {
+                    _logger.LogError("SMTP configuration not found in system settings.");
+                    return new ServiceResult(false, "SMTP configuration not found.");
+                }
+
+                var filter = Builders<SMTPConfig>.Filter.Eq(i => i.Id, existingSmtp.Id);
+                var update = Builders<SMTPConfig>.Update
+                    .Set(x => x.DisplayName, config.DisplayName)
+                    .Set(x => x.EnableSsl, config.EnableSsl)
+                    .Set(x => x.Host, config.Host)
+                    .Set(x => x.Port, config.Port)
+                    .Set(x => x.UserName, config.UserName)
+                    .Set(x => x.Password, config.Password)
+                    .Set(x => x.FromEmail, config.FromEmail)
+                    .Set(x => x.SenderName, config.SenderName)
+                    .Set(x => x.IsActive, true)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+                var result = await _smtpConfig.UpdateOneAsync(filter, update);
+
+                if (result.ModifiedCount > 0)
+                {
+                    _logger.LogInformation("SMTP configuration updated successfully.");
+                    return new ServiceResult(true, "SMTP configuration updated successfully.");
+                }
+
+                return new ServiceResult(false, "No changes were made to the SMTP configuration.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while updating SMTP configuration in System Settings.");
+                return new ServiceResult(false, "An internal error occurred while updating SMTP configuration.");
+            }
+        }
+
+
 
         public async Task<ServiceResult> SendEmailAsync(SendEmailRequest request)
         {

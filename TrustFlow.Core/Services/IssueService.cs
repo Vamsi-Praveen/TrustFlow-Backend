@@ -31,9 +31,6 @@ namespace TrustFlow.Core.Services
             _logger = logger;
         }
 
-        // -----------------------
-        // Counter for IssueId
-        // -----------------------
         private async Task<int> GetNextSequenceValue(string identifier)
         {
             var filter = Builders<Counter>.Filter.Eq(c => c.Identifier, identifier);
@@ -51,9 +48,6 @@ namespace TrustFlow.Core.Services
             return counter.Seq;
         }
 
-        // -----------------------
-        // Dictionary-based enrichment
-        // -----------------------
         private async Task<List<IssueDto>> EnrichIssues(List<Issue> issues)
         {
             if (!issues.Any()) return new List<IssueDto>();
@@ -94,9 +88,6 @@ namespace TrustFlow.Core.Services
             }).ToList();
         }
 
-        // -----------------------
-        // Raise Issue
-        // -----------------------
         public async Task<ServiceResult> RaiseIssue(Issue newIssue)
         {
             try
@@ -123,9 +114,6 @@ namespace TrustFlow.Core.Services
             }
         }
 
-        // -----------------------
-        // Edit Issue
-        // -----------------------
         public async Task<ServiceResult> EditIssue(Issue updatedIssue)
         {
             var filter = Builders<Issue>.Filter.Eq(i => i.Id, updatedIssue.Id);
@@ -136,9 +124,6 @@ namespace TrustFlow.Core.Services
             return new ServiceResult(true, "Issue updated successfully.", enriched);
         }
 
-        // -----------------------
-        // Update Issue Status
-        // -----------------------
         public async Task<ServiceResult> UpdateIssueStatus(string issueId, string newStatus)
         {
             var result = await _issues.UpdateOneAsync(
@@ -151,9 +136,6 @@ namespace TrustFlow.Core.Services
                 : new ServiceResult(true, "Issue status updated successfully.", null);
         }
 
-        // -----------------------
-        // Delete Issue
-        // -----------------------
         public async Task<ServiceResult> DeleteIssue(string issueId)
         {
             var result = await _issues.DeleteOneAsync(Builders<Issue>.Filter.Eq(i => i.Id, issueId));
@@ -162,9 +144,6 @@ namespace TrustFlow.Core.Services
                 : new ServiceResult(true, "Issue deleted successfully.", null);
         }
 
-        // -----------------------
-        // Get Issue Details
-        // -----------------------
         public async Task<ServiceResult> GetIssueDetailsAsync(string issueId)
         {
             var issue = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.Id, issueId)).FirstOrDefaultAsync();
@@ -174,9 +153,6 @@ namespace TrustFlow.Core.Services
             return new ServiceResult(true, "Issue details retrieved successfully.", enriched);
         }
 
-        // -----------------------
-        // Get Issues By Project (Aggregation)
-        // -----------------------
         public async Task<ServiceResult> GetIssuesByProjectAsync(string projectId)
         {
             var aggregation = await _issues.Aggregate()
@@ -187,9 +163,7 @@ namespace TrustFlow.Core.Services
             return new ServiceResult(true, "Project issues retrieved successfully.", enriched);
         }
 
-        // -----------------------
-        // Get Issues Reported / Assigned by User (Aggregation)
-        // -----------------------
+
         public async Task<ServiceResult> GetIssuesReportedByUserAsync(string userId)
         {
             var aggregation = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.ReporterUserId, userId)).ToListAsync();
@@ -204,9 +178,6 @@ namespace TrustFlow.Core.Services
             return new ServiceResult(true, "Issues assigned to user retrieved successfully.", enriched);
         }
 
-        // -----------------------
-        // Project-wise Analytics (Aggregation)
-        // -----------------------
         public async Task<ServiceResult> ProjectWiseIssueAnalytics()
         {
             try
@@ -242,9 +213,6 @@ namespace TrustFlow.Core.Services
             }
         }
 
-        // -----------------------
-        // User-wise Analytics (Aggregation)
-        // -----------------------
         public async Task<ServiceResult> UserWiseIssueAnalytics()
         {
             try

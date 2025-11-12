@@ -49,5 +49,40 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred while retrieving system settings.");
             }
         }
+
+        public async Task<ServiceResult> UpdatePortalConfig(PortalConfig config)
+        {
+            try
+            {
+                var existingPortalConfig = await _portalConfig.Find(_ => true).FirstOrDefaultAsync();
+
+                if (existingPortalConfig == null)
+                {
+                    _logger.LogWarning("No existing portal configuration found.");
+                    return new ServiceResult(false, "Portal configuration not found.");
+                }
+
+                var filter = Builders<PortalConfig>.Filter.Eq(x => x.Id, existingPortalConfig.Id);
+                var update = Builders<PortalConfig>.Update
+                    .Set(x => x.DefaultNotificationMethod, config.DefaultNotificationMethod)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+                var result = await _portalConfig.UpdateOneAsync(filter, update);
+
+                if (result.ModifiedCount > 0)
+                {
+                    _logger.LogInformation("Portal configuration updated successfully.");
+                    return new ServiceResult(true, "Portal configuration updated successfully.");
+                }
+
+                return new ServiceResult(false, "No changes were made to the portal configuration.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error while updating portal config System Settings: {ex}");
+                return new ServiceResult(false, "An internal error occurred while updating portal configuration.");
+            }
+        }
+
     }
 }
