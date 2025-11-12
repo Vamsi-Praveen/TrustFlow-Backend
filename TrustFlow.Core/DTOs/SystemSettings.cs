@@ -9,5 +9,7 @@ namespace TrustFlow.Core.DTOs
         public TeamsConfig teamsConfig { get; set; }
 
         public SlackConfig slackConfig { get; set; }
+
+        public PortalConfig portalConfig { get; set; } 
     }
 }
