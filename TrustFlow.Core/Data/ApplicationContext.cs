@@ -27,5 +27,7 @@ namespace TrustFlow.Core.Data
         public IMongoCollection<SlackConfig> SlackConfig => _database.GetCollection<SlackConfig>("SlackConfig");
         public IMongoCollection<TeamsConfig> TeamsConfig => _database.GetCollection<TeamsConfig>("TeamsConfig");
         public IMongoCollection<SMTPConfig> SMTPConfig => _database.GetCollection<SMTPConfig>("SMTPConfig");
+        public IMongoCollection<IssueStatus> IssueStatus => _database.GetCollection<IssueStatus>("IssueStatus");
+        public IMongoCollection<ActivityLog> ActivityLog => _database.GetCollection<ActivityLog>("ActivityLog");
     }
 }

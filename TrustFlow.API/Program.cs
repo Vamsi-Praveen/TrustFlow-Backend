@@ -80,6 +80,7 @@ namespace TrustFlow.API
             builder.Services.AddScoped<SystemSettingService>();
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<ActivityService>();
+            builder.Services.AddScoped<LogService>();
 
             var app = builder.Build();
 
