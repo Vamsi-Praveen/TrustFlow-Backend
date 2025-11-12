@@ -29,5 +29,7 @@ namespace TrustFlow.Core.Data
         public IMongoCollection<SMTPConfig> SMTPConfig => _database.GetCollection<SMTPConfig>("SMTPConfig");
         public IMongoCollection<IssueStatus> IssueStatus => _database.GetCollection<IssueStatus>("IssueStatus");
         public IMongoCollection<ActivityLog> ActivityLog => _database.GetCollection<ActivityLog>("ActivityLog");
+        public IMongoCollection<Counter> Counters => _database.GetCollection<Counter>("Counters");
+
     }
 }

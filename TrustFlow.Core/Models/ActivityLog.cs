@@ -14,7 +14,7 @@ namespace TrustFlow.Core.Models
 
         [BsonElement("userId")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string? UserId { get; set; } // Nullable: system actions
+        public string? UserId { get; set; } // Nullable: system actions")]
 
         [BsonElement("entityType")]
         public string EntityType { get; set; } = string.Empty; // e.g. "Bug", "Comment", "Project"

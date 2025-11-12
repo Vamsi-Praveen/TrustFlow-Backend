@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Data;
+using TrustFlow.Core.DTOs;
 using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
@@ -10,119 +12,228 @@ namespace TrustFlow.Core.Services
     {
         private readonly IMongoCollection<Issue> _issues;
         private readonly IMongoCollection<User> _users;
+        private readonly IMongoCollection<IssueStatus> _issueStatus;
+        private readonly IMongoCollection<IssuePriority> _issuePriorities;
+        private readonly IMongoCollection<IssueType> _issueTypes;
+        private readonly IMongoCollection<IssueSeverity> _issueSeverities;
+        private readonly IMongoCollection<Counter> _counters;
         private readonly ILogger<IssueService> _logger;
 
         public IssueService(ApplicationContext context, ILogger<IssueService> logger)
         {
             _issues = context.Issues;
             _users = context.Users;
+            _issueStatus = context.IssueStatus;
+            _issuePriorities = context.IssuePriorities;
+            _issueTypes = context.IssueTypes;
+            _issueSeverities = context.IssueSeverities;
+            _counters = context.Counters;
             _logger = logger;
         }
 
+        // -----------------------
+        // Counter for IssueId
+        // -----------------------
+        private async Task<int> GetNextSequenceValue(string identifier)
+        {
+            var filter = Builders<Counter>.Filter.Eq(c => c.Identifier, identifier);
+            var update = Builders<Counter>.Update
+                .Inc(c => c.Seq, 1)
+                .Set(c => c.UpdatedAt, DateTime.UtcNow);
 
-        public async Task<ServiceResult> GetOpenIssuesCountByUserAsync(string userId)
+            var options = new FindOneAndUpdateOptions<Counter>
+            {
+                IsUpsert = true,
+                ReturnDocument = ReturnDocument.After
+            };
+
+            var counter = await _counters.FindOneAndUpdateAsync(filter, update, options);
+            return counter.Seq;
+        }
+
+        // -----------------------
+        // Enrich Issues to DTO
+        // -----------------------
+        private async Task<List<IssueDto>> EnrichIssues(List<Issue> issues)
+        {
+            if (!issues.Any()) return new List<IssueDto>();
+
+            var userIds = issues.SelectMany(i => i.AssigneeUserIds.Append(i.ReporterUserId)).Distinct().ToList();
+            var statusIds = issues.Select(i => i.Status).Distinct().ToList();
+            var priorityIds = issues.Select(i => i.Priority).Distinct().ToList();
+            var typeIds = issues.Select(i => i.Type).Distinct().ToList();
+            var severityIds = issues.Select(i => i.Severity).Distinct().ToList();
+
+            var users = await _users.Find(Builders<User>.Filter.In(u => u.Id, userIds)).ToListAsync();
+            var statuses = await _issueStatus.Find(Builders<IssueStatus>.Filter.In(s => s.Id, statusIds)).ToListAsync();
+            var priorities = await _issuePriorities.Find(Builders<IssuePriority>.Filter.In(p => p.Id, priorityIds)).ToListAsync();
+            var types = await _issueTypes.Find(Builders<IssueType>.Filter.In(t => t.Id, typeIds)).ToListAsync();
+            var severities = await _issueSeverities.Find(Builders<IssueSeverity>.Filter.In(s => s.Id, severityIds)).ToListAsync();
+
+            var userMap = users.ToDictionary(u => u.Id, u => u.Username ?? u.Email ?? "Unknown");
+            var statusMap = statuses.ToDictionary(s => s.Id, s => s.Name);
+            var priorityMap = priorities.ToDictionary(p => p.Id, p => p.Name);
+            var typeMap = types.ToDictionary(t => t.Id, t => t.Name);
+            var severityMap = severities.ToDictionary(s => s.Id, s => s.Name);
+
+            return issues.Select(i => new IssueDto
+            {
+                Id = i.Id,
+                IssueId = i.IssueId,
+                Title = i.Title,
+                Description = i.Description,
+                ProjectId = i.ProjectId,
+                Status = new LookupDto { Id = i.Status, Name = statusMap.GetValueOrDefault(i.Status, "Unknown") },
+                Priority = new LookupDto { Id = i.Priority, Name = priorityMap.GetValueOrDefault(i.Priority, "Unknown") },
+                Type = new LookupDto { Id = i.Type, Name = typeMap.GetValueOrDefault(i.Type, "Unknown") },
+                Severity = new LookupDto { Id = i.Severity, Name = severityMap.GetValueOrDefault(i.Severity, "Unknown") },
+                Reporter = new LookupDto { Id = i.ReporterUserId, Name = userMap.GetValueOrDefault(i.ReporterUserId, "Unknown") },
+                Assignees = i.AssigneeUserIds.Select(a => new LookupDto { Id = a, Name = userMap.GetValueOrDefault(a, "Unknown") }).ToList(),
+                CreatedAt = i.CreatedAt,
+                UpdatedAt = i.UpdatedAt
+            }).ToList();
+        }
+
+        // -----------------------
+        // Raise Issue
+        // -----------------------
+        public async Task<ServiceResult> RaiseIssue(Issue newIssue)
         {
             try
             {
-                var filter = Builders<Issue>.Filter.And(
-                Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId),
-                Builders<Issue>.Filter.Ne(i => i.Status, "Closed"));
+                var typeObj = await _issueTypes.Find(Builders<IssueType>.Filter.Eq("_id", new ObjectId(newIssue.Type)))
+                    .FirstOrDefaultAsync();
+                if (typeObj == null)
+                    return new ServiceResult(false, "Invalid Issue Type.", null);
 
-                var count = await _issues.CountDocumentsAsync(filter);
-                _logger.LogInformation("User {UserId} has {Count} open issues assigned.", userId, count);
-                return new ServiceResult(true, "Get Open Issues Count by User Id Successful", count);
+                var nextSeq = await GetNextSequenceValue(typeObj.Name.ToUpper());
+                newIssue.IssueId = $"{typeObj.Name.ToUpper()}-{nextSeq}";
+                newIssue.CreatedAt = DateTime.UtcNow;
+                newIssue.UpdatedAt = DateTime.UtcNow;
+
+                await _issues.InsertOneAsync(newIssue);
+                var enriched = (await EnrichIssues(new List<Issue> { newIssue })).FirstOrDefault();
+
+                _logger.LogInformation("Issue {IssueId} created successfully.", newIssue.IssueId);
+                return new ServiceResult(true, "Issue raised successfully.", enriched);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving open issues count for user {UserId}.", userId);
-                return new ServiceResult(false, "Error retrieving open issues count.", null);
+                _logger.LogError(ex, "Error raising new issue.");
+                return new ServiceResult(false, "Error raising issue.", null);
             }
         }
 
-
+        // -----------------------
+        // Get Project-wise Issues
+        // -----------------------
         public async Task<ServiceResult> GetIssuesByProjectAsync(string projectId)
         {
             try
             {
-                var filter = Builders<Issue>.Filter.Eq(i => i.ProjectId, projectId);
-                var issues = await _issues.Find(filter).ToListAsync();
-                _logger.LogInformation("Retrieved {Count} issues for project {ProjectId}.", issues.Count, projectId);
-                return new ServiceResult(true, "Get Issues by Project Id Successful", issues);
+                var issues = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.ProjectId, projectId)).ToListAsync();
+                var enriched = await EnrichIssues(issues);
+                return new ServiceResult(true, "Project issues retrieved successfully.", enriched);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving issues for project {ProjectId}.", projectId);
-                return new ServiceResult(false, "Error retrieving issues for project.", null);
+                return new ServiceResult(false, "Error retrieving project issues.", null);
             }
         }
 
-        public async Task<ServiceResult> IssueAnalytics()
+        // -----------------------
+        // Get Issues Reported by User
+        // -----------------------
+        public async Task<ServiceResult> GetIssuesReportedByUserAsync(string userId)
         {
-            try
-            {
-                var totalIssues = await _issues.CountDocumentsAsync(FilterDefinition<Issue>.Empty);
-                var openIssues = await _issues.CountDocumentsAsync(Builders<Issue>.Filter.Ne(i => i.Status, "Closed"));
-                var closedIssues = await _issues.CountDocumentsAsync(Builders<Issue>.Filter.Eq(i => i.Status, "Closed"));
-                var analytics = new
-                {
-                    TotalIssues = totalIssues,
-                    OpenIssues = openIssues,
-                    ClosedIssues = closedIssues
-                };
-                _logger.LogInformation("Issue analytics retrieved successfully.");
-                return new ServiceResult(true, "Issue Analytics Successful", analytics);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving issue analytics.");
-                return new ServiceResult(false, "Error retrieving issue analytics.", null);
-            }
+            var issues = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.ReporterUserId, userId)).ToListAsync();
+            var enriched = await EnrichIssues(issues);
+            return new ServiceResult(true, "Issues reported by user retrieved successfully.", enriched);
         }
 
-        public async Task<ServiceResult> ProjectIssueAnalytics(string projectId)
+        // -----------------------
+        // Get Issues Assigned to User
+        // -----------------------
+        public async Task<ServiceResult> GetIssuesAssignedToUserAsync(string userId)
         {
-            try
-            {
-                var filter = Builders<Issue>.Filter.Eq(i => i.ProjectId, projectId);
-                var totalIssues = await _issues.CountDocumentsAsync(filter);
-                var openIssues = await _issues.CountDocumentsAsync(Builders<Issue>.Filter.And(
-                    filter,
-                    Builders<Issue>.Filter.Ne(i => i.Status, "Closed")));
-                var closedIssues = await _issues.CountDocumentsAsync(Builders<Issue>.Filter.And(
-                    filter,
-                    Builders<Issue>.Filter.Eq(i => i.Status, "Closed")));
-                var analytics = new
-                {
-                    TotalIssues = totalIssues,
-                    OpenIssues = openIssues,
-                    ClosedIssues = closedIssues
-                };
-                _logger.LogInformation("Project {ProjectId} issue analytics retrieved successfully.", projectId);
-                return new ServiceResult(true, "Project Issue Analytics Successful", analytics);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving issue analytics for project {ProjectId}.", projectId);
-                return new ServiceResult(false, "Error retrieving project issue analytics.", null);
-            }
+            var issues = await _issues.Find(Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId)).ToListAsync();
+            var enriched = await EnrichIssues(issues);
+            return new ServiceResult(true, "Issues assigned to user retrieved successfully.", enriched);
         }
 
+        // -----------------------
+        // Get Issue Details
+        // -----------------------
+        public async Task<ServiceResult> GetIssueDetailsAsync(string issueId)
+        {
+            var issue = await _issues.Find(Builders<Issue>.Filter.Eq(i => i.Id, issueId)).FirstOrDefaultAsync();
+            if (issue == null) return new ServiceResult(false, "Issue not found.", null);
 
+            var enriched = (await EnrichIssues(new List<Issue> { issue })).FirstOrDefault();
+            return new ServiceResult(true, "Issue details retrieved successfully.", enriched);
+        }
+
+        // -----------------------
+        // Update Issue Status
+        // -----------------------
+        public async Task<ServiceResult> UpdateIssueStatus(string issueId, string newStatus)
+        {
+            var result = await _issues.UpdateOneAsync(
+                Builders<Issue>.Filter.Eq(i => i.Id, issueId),
+                Builders<Issue>.Update.Set(i => i.Status, newStatus).Set(i => i.UpdatedAt, DateTime.UtcNow)
+            );
+
+            return result.MatchedCount == 0
+                ? new ServiceResult(false, "Issue not found.", null)
+                : new ServiceResult(true, "Issue status updated successfully.", null);
+        }
+
+        // -----------------------
+        // Delete Issue
+        // -----------------------
+        public async Task<ServiceResult> DeleteIssue(string issueId)
+        {
+            var result = await _issues.DeleteOneAsync(Builders<Issue>.Filter.Eq(i => i.Id, issueId));
+            return result.DeletedCount == 0
+                ? new ServiceResult(false, "Issue not found.", null)
+                : new ServiceResult(true, "Issue deleted successfully.", null);
+        }
+
+        // -----------------------
+        // Project-wise Analytics
+        // -----------------------
         public async Task<ServiceResult> ProjectWiseIssueAnalytics()
         {
             try
             {
-                var projectGroups = await _issues.Aggregate()
+                // Fetch all statuses and categorize
+                var allStatuses = await _issueStatus.Find(Builders<IssueStatus>.Filter.Empty).ToListAsync();
+                var openStatusIds = allStatuses.Where(s => s.Name != "Closed" && s.Name != "Resolved").Select(s => s.Id).ToList();
+                var closedStatusIds = allStatuses.Where(s => s.Name == "Closed" || s.Name == "Resolved").Select(s => s.Id).ToList();
+
+                // Aggregate by project
+                var aggregation = await _issues.Aggregate()
                     .Group(i => i.ProjectId, g => new
                     {
                         ProjectId = g.Key,
-                        TotalIssues = g.Count(),
-                        OpenIssues = g.Count(i => i.Status != "Closed"),
-                        ClosedIssues = g.Count(i => i.Status == "Closed")
+                        Total = g.Count(),
+                        Open = g.Count(i => openStatusIds.Contains(i.Status)),
+                        Closed = g.Count(i => closedStatusIds.Contains(i.Status))
                     })
                     .ToListAsync();
+
+                // Map to DTO
+                var result = aggregation.Select(a => new ProjectIssueAnalyticsDto
+                {
+                    ProjectId = a.ProjectId,
+                    TotalIssues = a.Total,
+                    OpenIssues = a.Open,
+                    ClosedIssues = a.Closed
+                }).ToList();
+
                 _logger.LogInformation("Project-wise issue analytics retrieved successfully.");
-                return new ServiceResult(true, "Project Wise Issue Analytics Successful", projectGroups);
+                return new ServiceResult(true, "Project-wise analytics retrieved successfully.", result);
             }
             catch (Exception ex)
             {
@@ -131,181 +242,56 @@ namespace TrustFlow.Core.Services
             }
         }
 
-
-        public async Task<ServiceResult> GetIssueDetails(string issueId)
+        // -----------------------
+        // User-wise Analytics
+        // -----------------------
+        public async Task<ServiceResult> UserWiseIssueAnalytics()
         {
             try
             {
-                var filter = Builders<Issue>.Filter.Eq(i => i.Id, issueId);
-                var issue = await _issues.Find(filter).FirstOrDefaultAsync();
-                if (issue == null)
+                // Fetch all statuses and categorize
+                var allStatuses = await _issueStatus.Find(Builders<IssueStatus>.Filter.Empty).ToListAsync();
+                var openStatusIds = allStatuses.Where(s => s.Name != "Closed" && s.Name != "Resolved").Select(s => s.Id).ToList();
+                var closedStatusIds = allStatuses.Where(s => s.Name == "Closed" || s.Name == "Resolved").Select(s => s.Id).ToList();
+
+                // Aggregate by assignee
+                var aggregation = await _issues.Aggregate()
+                    .Unwind<Issue, BsonDocument>(i => i.AssigneeUserIds) // flatten Assignees
+                    .Group(new BsonDocument
+                    {
+                { "_id", "$AssigneeUserIds" },
+                { "Total", new BsonDocument("$sum", 1) },
+                { "Open", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
+                    { new BsonDocument("$in", new BsonArray { "$Status", new BsonArray(openStatusIds) }), 1, 0 })) },
+                { "Closed", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
+                    { new BsonDocument("$in", new BsonArray { "$Status", new BsonArray(closedStatusIds) }), 1, 0 })) }
+                    })
+                    .ToListAsync();
+
+                // Enrich with user names
+                var userIds = aggregation.Select(a => a["_id"].AsString).ToList();
+                var users = await _users.Find(Builders<User>.Filter.In(u => u.Id, userIds)).ToListAsync();
+                var userMap = users.ToDictionary(u => u.Id, u => u.FullName ?? u.Email ?? "Unknown");
+
+                var result = aggregation.Select(a => new
                 {
-                    _logger.LogWarning("Issue {IssueId} not found.", issueId);
-                    return new ServiceResult(false, "Issue not found.", null);
-                }
-                _logger.LogInformation("Retrieved details for issue {IssueId}.", issueId);
-                return new ServiceResult(true, "Get Issue Details Successful", issue);
+                    UserId = a["_id"].AsString,
+                    UserName = userMap.GetValueOrDefault(a["_id"].AsString, "Unknown"),
+                    TotalIssues = a["Total"].AsInt32,
+                    OpenIssues = a["Open"].AsInt32,
+                    ClosedIssues = a["Closed"].AsInt32
+                }).ToList();
+
+                _logger.LogInformation("User-wise issue analytics retrieved successfully.");
+                return new ServiceResult(true, "User-wise analytics retrieved successfully.", result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving details for issue {IssueId}.", issueId);
-                return new ServiceResult(false, "Error retrieving issue details.", null);
+                _logger.LogError(ex, "Error retrieving user-wise issue analytics.");
+                return new ServiceResult(false, "Error retrieving user-wise issue analytics.", null);
             }
         }
 
-        public async Task<ServiceResult> GetProjectIssuesByStatus(string projectId, string status)
-        {
-            try
-            {
-                var filter = Builders<Issue>.Filter.And(
-                    Builders<Issue>.Filter.Eq(i => i.ProjectId, projectId),
-                    Builders<Issue>.Filter.Eq(i => i.Status, status));
-                var issues = await _issues.Find(filter).ToListAsync();
-                _logger.LogInformation("Retrieved {Count} issues for project {ProjectId} with status {Status}.", issues.Count, projectId, status);
-                return new ServiceResult(true, "Get Project Issues by Status Successful", issues);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving issues for project {ProjectId} with status {Status}.", projectId, status);
-                return new ServiceResult(false, "Error retrieving project issues by status.", null);
-            }
-        }
-
-
-        public async Task<ServiceResult> GetIssuesReportedByUserAsync(string userId)
-        {
-            try
-            {
-                var filter = Builders<Issue>.Filter.Eq(i => i.ReporterUserId, userId);
-                var issues = await _issues.Find(filter).ToListAsync();
-                _logger.LogInformation("Retrieved {Count} issues reported by user {UserId}.", issues.Count, userId);
-                return new ServiceResult(true, "Get Issues Reported by User Id Successful", issues);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving issues reported by user {UserId}.", userId);
-                return new ServiceResult(false, "Error retrieving issues reported by user.", null);
-            }
-        }
-
-        public async Task<ServiceResult> GetIssuesAssignedToUserAsync(string userId)
-        {
-            try
-            {
-                var filter = Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId);
-                var issues = await _issues.Find(filter).ToListAsync();
-                _logger.LogInformation("Retrieved {Count} issues assigned to user {UserId}.", issues.Count, userId);
-                return new ServiceResult(true, "Get Issues Assigned to User Id Successful", issues);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving issues assigned to user {UserId}.", userId);
-                return new ServiceResult(false, "Error retrieving issues assigned to user.", null);
-            }
-        }
-
-
-        public async Task<ServiceResult> GetIssueDetailsAsync(string issueId)
-        {
-            try
-            {
-                var filter = Builders<Issue>.Filter.Eq(i => i.Id, issueId);
-                var issue = await _issues.Find(filter).FirstOrDefaultAsync();
-                if (issue == null)
-                {
-                    _logger.LogWarning("Issue {IssueId} not found.", issueId);
-                    return new ServiceResult(false, "Issue not found.", null);
-                }
-                _logger.LogInformation("Retrieved details for issue {IssueId}.", issueId);
-                return new ServiceResult(true, "Get Issue Details Successful", issue);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving details for issue {IssueId}.", issueId);
-                return new ServiceResult(false, "Error retrieving issue details.", null);
-            }
-        }
-
-
-        public async Task<ServiceResult> RaiseIssue(Issue newIssue)
-        {
-            try
-            {
-                await _issues.InsertOneAsync(newIssue);
-                _logger.LogInformation("New issue {IssueId} raised successfully.", newIssue.Id);
-                return new ServiceResult(true, "Issue raised successfully.", newIssue);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error raising new issue.");
-                return new ServiceResult(false, "Error raising new issue.", null);
-            }
-        }
-
-        public async Task<ServiceResult> UpdateIssueStatus(string issueId, string newStatus)
-        {
-            try
-            {
-                var filter = Builders<Issue>.Filter.Eq(i => i.Id, issueId);
-                var update = Builders<Issue>.Update.Set(i => i.Status, newStatus);
-                var result = await _issues.UpdateOneAsync(filter, update);
-                if (result.MatchedCount == 0)
-                {
-                    _logger.LogWarning("Issue {IssueId} not found for status update.", issueId);
-                    return new ServiceResult(false, "Issue not found.", null);
-                }
-                _logger.LogInformation("Issue {IssueId} status updated to {NewStatus}.", issueId, newStatus);
-                return new ServiceResult(true, "Issue status updated successfully.", null);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating status for issue {IssueId}.", issueId);
-                return new ServiceResult(false, "Error updating issue status.", null);
-            }
-        }
-
-        public async Task<ServiceResult> DeleteIssue(string issueId)
-        {
-            try
-            {
-                var filter = Builders<Issue>.Filter.Eq(i => i.Id, issueId);
-                var result = await _issues.DeleteOneAsync(filter);
-                if (result.DeletedCount == 0)
-                {
-                    _logger.LogWarning("Issue {IssueId} not found for deletion.", issueId);
-                    return new ServiceResult(false, "Issue not found.", null);
-                }
-                _logger.LogInformation("Issue {IssueId} deleted successfully.", issueId);
-                return new ServiceResult(true, "Issue deleted successfully.", null);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting issue {IssueId}.", issueId);
-                return new ServiceResult(false, "Error deleting issue.", null);
-            }
-        }
-
-
-        public async Task<ServiceResult> EditIssue(Issue updatedIssue)
-        {
-            try
-            {
-                var filter = Builders<Issue>.Filter.Eq(i => i.Id, updatedIssue.Id);
-                var result = await _issues.ReplaceOneAsync(filter, updatedIssue);
-                if (result.MatchedCount == 0)
-                {
-                    _logger.LogWarning("Issue {IssueId} not found for update.", updatedIssue.Id);
-                    return new ServiceResult(false, "Issue not found.", null);
-                }
-                _logger.LogInformation("Issue {IssueId} updated successfully.", updatedIssue.Id);
-                return new ServiceResult(true, "Issue updated successfully.", updatedIssue);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating issue {IssueId}.", updatedIssue.Id);
-                return new ServiceResult(false, "Error updating issue.", null);
-            }
-        }
 
     }
 }
