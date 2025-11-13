@@ -257,15 +257,15 @@ namespace TrustFlow.API.Controllers
             var userId = Id;
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new APIResponse(false, "User Not authenticated."));
-            var result = await _userService.UpdateUserNotificationConfig(userId,notificationSettings);
+            var result = await _userService.UpdateUserNotificationConfig(userId, notificationSettings);
             return ToActionResult(result);
         }
 
         [HttpGet("notificationsettings")]
-        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(APIResponse),StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> FetchUserNotificationSettings()
         {
             var userId = Id;
@@ -290,7 +290,7 @@ namespace TrustFlow.API.Controllers
                 return BadRequest(new APIResponse(false, "Invalid user data provided.", ModelState));
             }
 
-            if(createBulkUsers.UsersListFile == null || createBulkUsers.UsersListFile.Length ==0)
+            if (createBulkUsers.UsersListFile == null || createBulkUsers.UsersListFile.Length == 0)
             {
                 return BadRequest(new APIResponse(false, "No file uploaded for bulk user creation."));
             }
@@ -311,9 +311,10 @@ namespace TrustFlow.API.Controllers
                 return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
             }
 
-           initialSetPassword.UserId = Id;
+            initialSetPassword.UserId = Id;
 
             var result = await _userService.InitialSetPasswordAsync(initialSetPassword.UserId, initialSetPassword.NewPassword);
             return ToActionResult(result);
         }
     }
+}

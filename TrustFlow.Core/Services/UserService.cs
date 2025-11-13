@@ -376,7 +376,7 @@ namespace TrustFlow.Core.Services
             try
             {
                 var user = await GetUserByIdAsync(userId);
-                if(!user.Success)
+                if (!user.Success)
                 {
                     return new ServiceResult(false, "User not found.");
                 }
@@ -637,7 +637,7 @@ namespace TrustFlow.Core.Services
 
                 }
 
-                if(rows.Count == 0)
+                if (rows.Count == 0)
                 {
                     _logger.LogWarning("No valid users found in the CSV file.");
                     return new ServiceResult(false, "No valid users found in the CSV file.");
@@ -654,3 +654,4 @@ namespace TrustFlow.Core.Services
             }
         }
     }
+}
