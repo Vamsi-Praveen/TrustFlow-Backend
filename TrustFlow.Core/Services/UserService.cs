@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Data;
@@ -178,6 +180,10 @@ namespace TrustFlow.Core.Services
                     return new ServiceResult(false, "Role not found");
                 }
 
+
+
+                newUser.FullName = $"{newUser.FirstName} {newUser.LastName}";
+
                 newUser.PasswordHash = _passwordHelper.HashPassword("trustflow");
                 newUser.CreatedAt = DateTime.UtcNow;
                 newUser.UpdatedAt = DateTime.UtcNow;
@@ -206,7 +212,7 @@ namespace TrustFlow.Core.Services
                 _logger.LogError(ex, "Failed to create user: {Username}", newUser.Username);
                 return new ServiceResult(false, "An internal error occurred while creating the user.");
             }
-                                         }
+        }
 
         public async Task<ServiceResult> UpdateAsync(string id, User updatedUser)
         {
@@ -365,6 +371,37 @@ namespace TrustFlow.Core.Services
             }
         }
 
+        public async Task<ServiceResult> InitialSetPasswordAsync(string userId, string newPassword)
+        {
+            try
+            {
+                var user = await GetUserByIdAsync(userId);
+                if(!user.Success)
+                {
+                    return new ServiceResult(false, "User not found.");
+                }
+
+                var existingUser = (User)user.Result;
+                existingUser.PasswordHash = _passwordHelper.HashPassword(newPassword);
+                existingUser.DefaultPasswordChanged = true;
+                existingUser.UpdatedAt = DateTime.UtcNow;
+
+                await _users.FindOneAndUpdateAsync(userId => userId.Id == existingUser.Id,
+                    Builders<User>.Update
+                    .Set(u => u.PasswordHash, existingUser.PasswordHash)
+                    .Set(u => u.DefaultPasswordChanged, existingUser.DefaultPasswordChanged)
+                    .Set(u => u.UpdatedAt, existingUser.UpdatedAt)
+                );
+
+                return new ServiceResult(true, "Initial password set successfully.");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to set initial password for user ID: {UserId}", userId);
+                return new ServiceResult(false, "An internal error occurred while setting the initial password.");
+            }
+        }
 
         public async Task<ServiceResult> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
         {
@@ -401,11 +438,11 @@ namespace TrustFlow.Core.Services
             }
         }
 
-        public async Task<ServiceResult> UpdateUserNotificationConfig(string userId,UserNotification userNotificationSetting)
+        public async Task<ServiceResult> UpdateUserNotificationConfig(string userId, UserNotification userNotificationSetting)
         {
             try
             {
-   
+
                 var user = await GetUserByIdAsync(userId);
                 if (!user.Success)
                 {
@@ -467,5 +504,153 @@ namespace TrustFlow.Core.Services
 
         }
 
+        public async Task<ServiceResult> CreateBulkUsersAsync(IFormFile file)
+        {
+            try
+            {
+                var extension = Path.GetExtension(file.FileName).ToLower();
+                if (extension == ".xlsx" || extension == ".xls")
+                {
+                    var data = await ReadExcelFile(file);
+                    return data;
+                }
+                else if (extension == ".csv")
+                {
+                    var data = await ReadCsvFile(file);
+                    return data;
+                }
+
+                return new ServiceResult(false, "Unsupported file type. Please upload .xlsx or .csv.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create bulk users from file.");
+                return new ServiceResult(false, "An internal error occurred while creating bulk users.");
+            }
+        }
+
+        public async Task<ServiceResult> ReadExcelFile(IFormFile file)
+        {
+            try
+            {
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+
+                using var workbook = new XLWorkbook(stream);
+                var worksheet = workbook.Worksheet(1);
+
+                if (worksheet == null)
+                {
+                    _logger.LogWarning("No worksheet found in the Excel file.");
+                    return new ServiceResult(false, "No worksheet found in the Excel file.");
+                }
+
+                var rows = new List<User>();
+
+                foreach (var row in worksheet.RowsUsed().Skip(1)) // Skip header row
+                {
+                    var email = row.Cell(3).GetString();
+                    var firstName = row.Cell(1).GetString();
+                    var lastName = row.Cell(2).GetString();
+                    var roleName = row.Cell(4).GetString();
+                    var role = await _roles.Find(r => r.RoleName.ToLower() == roleName.ToLower()).FirstOrDefaultAsync();
+                    if (role == null)
+                    {
+                        _logger.LogWarning($"Role '{roleName}' not found. Skipping user '{email}'.");
+                        continue; // Skip users with invalid roles
+                    }
+                    var user = new User
+                    {
+                        Email = email,
+                        Username = email,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        FullName = $"{firstName} {lastName}",
+                        RoleId = role.Id,
+                        Role = role.RoleName,
+                        PasswordHash = _passwordHelper.HashPassword("trustflow"),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsActive = true
+                    };
+                    rows.Add(user);
+                }
+
+                if (rows.Count == 0)
+                {
+                    _logger.LogWarning("No valid users found in the Excel file.");
+                    return new ServiceResult(false, "No valid users found in the Excel file.");
+                }
+
+                await _users.InsertManyAsync(rows);
+
+                return new ServiceResult(true, "Excel file processed successfully.", rows);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading Excel file for bulk user creation.");
+                return new ServiceResult(false, "An error occurred while processing the Excel file.");
+            }
+        }
+
+        public async Task<ServiceResult> ReadCsvFile(IFormFile file)
+        {
+            try
+            {
+                using var stream = new StreamReader(file.OpenReadStream());
+                var csv = await stream.ReadToEndAsync();
+                var lines = csv.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                var rows = new List<User>();
+                foreach (var line in lines)
+                {
+                    var columns = line.Split(',');
+                    if (columns.Length < 4)
+                    {
+                        _logger.LogWarning("Invalid CSV format. Each row must have at least 4 columns.");
+                        continue; // Skip invalid rows
+                    }
+                    var email = columns[2];
+                    var firstName = columns[0];
+                    var lastName = columns[1];
+                    var roleName = columns[3];
+                    var role = await _roles.Find(r => r.RoleName.ToLower() == roleName.ToLower()).FirstOrDefaultAsync();
+                    if (role == null)
+                    {
+                        _logger.LogWarning($"Role '{roleName}' not found. Skipping user '{email}'.");
+                        continue; // Skip users with invalid roles
+                    }
+                    var user = new User
+                    {
+                        Email = email,
+                        Username = email,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        FullName = $"{firstName} {lastName}",
+                        RoleId = role.Id,
+                        Role = role.RoleName,
+                        PasswordHash = _passwordHelper.HashPassword("trustflow"),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsActive = true
+                    };
+                    rows.Add(user);
+
+                }
+
+                if(rows.Count == 0)
+                {
+                    _logger.LogWarning("No valid users found in the CSV file.");
+                    return new ServiceResult(false, "No valid users found in the CSV file.");
+                }
+
+                await _users.InsertManyAsync(rows);
+                return new ServiceResult(true, "CSV file processed successfully.", rows);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading CSV file for bulk user creation.");
+                return new ServiceResult(false, "An error occurred while processing the CSV file.");
+            }
+        }
     }
-}

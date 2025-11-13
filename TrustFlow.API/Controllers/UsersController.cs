@@ -276,5 +276,44 @@ namespace TrustFlow.API.Controllers
             var result = await _userService.GetUserNotificationConfig(userId);
             return ToActionResult(result);
         }
+
+
+        [HttpPost("CreateBulkUsers")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CreateBulkUsers([FromBody] CreateBulkUsers createBulkUsers)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new APIResponse(false, "Invalid user data provided.", ModelState));
+            }
+
+            if(createBulkUsers.UsersListFile == null || createBulkUsers.UsersListFile.Length ==0)
+            {
+                return BadRequest(new APIResponse(false, "No file uploaded for bulk user creation."));
+            }
+
+            var result = await _userService.CreateBulkUsersAsync(createBulkUsers.UsersListFile);
+            return ToActionResult(result);
+        }
+
+        [HttpPost("IntialSetPassword")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> IntialSetPassword([FromBody] InitialSetPassword initialSetPassword)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
+            }
+
+           initialSetPassword.UserId = Id;
+
+            var result = await _userService.InitialSetPasswordAsync(initialSetPassword.UserId, initialSetPassword.NewPassword);
+            return ToActionResult(result);
+        }
     }
-}
