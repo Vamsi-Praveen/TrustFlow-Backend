@@ -204,7 +204,8 @@ namespace TrustFlow.Core.Services
             var subject = "Welcome to TrustFlow!";
             var body = $"<p>Dear {userName},</p>" +
                        "<p>Welcome to TrustFlow! We're excited to have you on board.</p>" +
-                       "<p>Your default password is <strong>TrustFlow@123</strong></p>"+
+                       "<p>Your default password is <strong>trustflow</strong></p>"+
+                       "<p>please change the password on login</p>"+
                        "<p>Best regards,<br/>The TrustFlow Team</p>";
             var emailRequest = new SendEmailRequest
             {

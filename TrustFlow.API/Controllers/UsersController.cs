@@ -283,7 +283,7 @@ namespace TrustFlow.API.Controllers
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CreateBulkUsers([FromBody] CreateBulkUsers createBulkUsers)
+        public async Task<IActionResult> CreateBulkUsers([FromForm] CreateBulkUsers createBulkUsers)
         {
             if (!ModelState.IsValid)
             {
@@ -316,5 +316,22 @@ namespace TrustFlow.API.Controllers
             var result = await _userService.InitialSetPasswordAsync(initialSetPassword.UserId, initialSetPassword.NewPassword);
             return ToActionResult(result);
         }
+
+
+        //[AllowAnonymous]
+        //[HttpPost("PasswordReset")]
+        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        //public async Task<IActionResult> PasswordReset([FromBody] ChangePassword passwordReset)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
+        //    }
+        //    var result = await _userService.PasswordResetAsync(passwordReset.Email);
+        //    return ToActionResult(result);
+        //}
     }
 }
