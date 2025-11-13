@@ -14,6 +14,10 @@ namespace TrustFlow.Core.Services
         private readonly EmailService _emailService;
         private readonly ILogger<SystemSettingService> _logger;
         private readonly IMongoCollection<PortalConfig> _portalConfig;
+        private readonly IMongoCollection<IssueStatus> _issueStatuses;
+        private readonly IMongoCollection<IssuePriority> _issuePriority;
+        private readonly IMongoCollection<IssueSeverity> _issueSeverity;
+        private readonly IMongoCollection<IssueType> _issueType;
 
         public SystemSettingService(TeamsService teamsService, SlackService slackService, EmailService emailService, ILogger<SystemSettingService> logger, ApplicationContext context)
         {
@@ -22,6 +26,10 @@ namespace TrustFlow.Core.Services
             _emailService = emailService;
             _logger = logger;
             _portalConfig = context.PortalConfig;
+            _issueStatuses = context.IssueStatus;
+            _issuePriority = context.IssuePriorities;
+            _issueSeverity = context.IssueSeverities;
+            _issueType = context.IssueTypes;
         }
 
         public async Task<ServiceResult> GetSystemSettings()
@@ -81,6 +89,58 @@ namespace TrustFlow.Core.Services
             {
                 _logger.LogError($"Error while updating portal config System Settings: {ex}");
                 return new ServiceResult(false, "An internal error occurred while updating portal configuration.");
+            }
+        }
+
+        public async Task<ServiceResult> GetIssueStatuses()
+        {
+            try
+            {
+                var issueStatus = await _issueStatuses.Find(_ => true).ToListAsync();
+
+                return new ServiceResult(true, "Succesfully fetched the Issue Status", issueStatus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error while Getting System issue status: {ex}");
+                return new ServiceResult(false, "An internal error occurred while retrieving system settings.");
+            }
+        }
+
+        public async Task<ServiceResult> GetIssueConfigurations()
+        {
+            try
+            {
+                var issueStatus = await _issueStatuses.Find(_ => true)
+                    .Project(x => new {x.Id, x.Name,x.Description })
+                    .ToListAsync();
+
+                var issuePriority = await _issuePriority.Find(_ => true)
+                    .Project(x => new { x.Id,x.Name,x.Description })
+                    .ToListAsync();
+
+                var issueTypes = await _issueType.Find(_ => true)
+                    .Project(x => new { x.Id, x.Name,x.Description })
+                    .ToListAsync();
+
+                var issueSeverity = await _issueSeverity.Find(_ => true)
+                    .Project(x => new { x.Id, x.Name ,x.Description })
+                    .ToListAsync();
+
+                var issueConfigurations = new
+                {
+                    issueStatus,
+                    issuePriority,
+                    issueTypes,
+                    issueSeverity
+                };
+
+                return new ServiceResult(true, "Succesfully fetched the Issue Configurations", issueConfigurations);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error while Getting System issue configuration: {ex}");
+                return new ServiceResult(false, "An internal error occurred while retrieving system settings.");
             }
         }
 

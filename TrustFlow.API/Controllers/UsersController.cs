@@ -299,8 +299,8 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-        [HttpPost("IntialSetPassword")]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        [HttpPost("InitialSetPassword")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]

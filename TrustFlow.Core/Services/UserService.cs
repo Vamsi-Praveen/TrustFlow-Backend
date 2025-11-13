@@ -89,7 +89,8 @@ namespace TrustFlow.Core.Services
                     user.IsActive,
                     user.CreatedAt,
                     user.UpdatedAt,
-                    Permissions = rolePermissions
+                    Permissions = rolePermissions,
+                    user.DefaultPasswordChanged
                 };
 
                 return new ServiceResult(true, "User retrieved successfully.", userResponse);
@@ -302,6 +303,7 @@ namespace TrustFlow.Core.Services
                     .Set(u => u.Email, updatedUser.Email)
                     .Set(u => u.FirstName, updatedUser.FirstName)
                     .Set(u => u.LastName, updatedUser.LastName)
+                    .Set(u=>u.Username,updatedUser.UserName)
                     .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
                 var result = await _users.UpdateOneAsync(u => u.Id == id, update);
@@ -607,7 +609,7 @@ namespace TrustFlow.Core.Services
                     if (columns.Length < 4)
                     {
                         _logger.LogWarning("Invalid CSV format. Each row must have at least 4 columns.");
-                        continue; // Skip invalid rows
+                        continue;
                     }
                     var email = columns[2];
                     var firstName = columns[0];
@@ -617,7 +619,7 @@ namespace TrustFlow.Core.Services
                     if (role == null)
                     {
                         _logger.LogWarning($"Role '{roleName}' not found. Skipping user '{email}'.");
-                        continue; // Skip users with invalid roles
+                        continue;
                     }
                     var user = new User
                     {

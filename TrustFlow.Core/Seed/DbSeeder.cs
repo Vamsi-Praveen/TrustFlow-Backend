@@ -35,10 +35,10 @@ namespace TrustFlow.Core.Seed
                 Console.WriteLine("Seeding Bug Priorities...");
                 var priorities = new List<IssuePriority>
                 {
-                    new IssuePriority { Name = "Critical", Description = "Blocks essential functionality.", Order = 1, IsDefault = false },
-                    new IssuePriority { Name = "High", Description = "Significant impact, but not a complete block.", Order = 2, IsDefault = false },
-                    new IssuePriority { Name = "Medium", Description = "Standard priority, should be addressed in due course.", Order = 3, IsDefault = true }, // Default
-                    new IssuePriority { Name = "Low", Description = "Minor impact, can be addressed later.", Order = 4, IsDefault = false }
+                    new IssuePriority { Name = "Critical", Description = "Blocks essential functionality." },
+                    new IssuePriority { Name = "High", Description = "Significant impact, but not a complete block." },
+                    new IssuePriority {Name = "Medium", Description = "Standard priority, should be addressed in due course."}, // Default
+                    new IssuePriority {Name = "Low", Description = "Minor impact, can be addressed later."}
                 };
                 await _context.IssuePriorities.InsertManyAsync(priorities);
                 Console.WriteLine($"Seeded {priorities.Count} Bug Priorities.");
@@ -53,10 +53,10 @@ namespace TrustFlow.Core.Seed
                 Console.WriteLine("Seeding Bug Severities...");
                 var severities = new List<IssueSeverity>
                 {
-                    new IssueSeverity { Name = "Blocker", Description = "System completely unusable or core feature broken.", Order = 1, IsDefault = false },
-                    new IssueSeverity { Name = "Major", Description = "Major loss of function or critical data error.", Order = 2, IsDefault = false },
-                    new IssueSeverity { Name = "Minor", Description = "Minor loss of function or UI defect.", Order = 3, IsDefault = true },
-                    new IssueSeverity { Name = "Cosmetic", Description = "Aesthetic issue, no functional impact.", Order = 4, IsDefault = false }
+                    new IssueSeverity {Name = "Blocker", Description = "System completely unusable or core feature broken."},
+                    new IssueSeverity {Name = "Major", Description = "Major loss of function or critical data error."},
+                    new IssueSeverity {Name = "Minor", Description = "Minor loss of function or UI defect."},
+                    new IssueSeverity {Name = "Cosmetic", Description = "Aesthetic issue, no functional impact."}
                 };
                 await _context.IssueSeverities.InsertManyAsync(severities);
                 Console.WriteLine($"Seeded {severities.Count} Bug Severities.");
@@ -71,10 +71,10 @@ namespace TrustFlow.Core.Seed
                 Console.WriteLine("Seeding Bug Types...");
                 var types = new List<IssueType>
                 {
-                    new IssueType { Name = "Bug", Description = "A defect or error in the software.", IsDefault = true },
-                    new IssueType { Name = "Feature Request", Description = "A new piece of functionality.", IsDefault = false },
-                    new IssueType { Name = "Task", Description = "A unit of work to be done.", IsDefault = false },
-                    new IssueType { Name = "Improvement", Description = "Enhancement to existing functionality.", IsDefault = false }
+                    new IssueType { Name = "Bug", Description = "A defect or error in the software."},
+                    new IssueType { Name = "Feature Request", Description = "A new piece of functionality." },
+                    new IssueType { Name = "Task", Description = "A unit of work to be done." },
+                    new IssueType { Name = "Improvement", Description = "Enhancement to existing functionality." }
                 };
                 await _context.IssueTypes.InsertManyAsync(types);
                 Console.WriteLine($"Seeded {types.Count} Bug Types.");

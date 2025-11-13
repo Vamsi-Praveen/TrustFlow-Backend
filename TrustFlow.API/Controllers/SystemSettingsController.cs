@@ -98,5 +98,15 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
+        [HttpGet("issues-config")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetIssueConfigurations()
+        {
+            var result = await _systemSettingService.GetIssueConfigurations();
+            return ToActionResult(result);
+        }
+
     }
 }

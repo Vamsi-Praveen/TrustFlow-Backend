@@ -9,11 +9,5 @@ namespace TrustFlow.Core.Models
 
         [BsonElement("Description")]
         public string Description { get; set; }
-
-        [BsonElement("Order")]
-        public int Order { get; set; }
-
-        [BsonElement("IsDefault")]
-        public bool IsDefault { get; set; } = false;
     }
 }
