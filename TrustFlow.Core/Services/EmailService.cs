@@ -1,4 +1,5 @@
 ﻿using MailKit.Net.Smtp;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using MongoDB.Driver;
@@ -13,11 +14,15 @@ namespace TrustFlow.Core.Services
     {
         private readonly IMongoCollection<SMTPConfig> _smtpConfig;
         private readonly ILogger<EmailService> _logger;
+        private readonly RedisCacheService _redisCacheService;
+        private readonly IConfiguration _configuration;
 
-        public EmailService(ApplicationContext context, ILogger<EmailService> logger)
+        public EmailService(ApplicationContext context, IConfiguration configuration, ILogger<EmailService> logger, RedisCacheService redisCacheService)
         {
             _logger = logger;
             _smtpConfig = context.SMTPConfig;
+            _redisCacheService = redisCacheService;
+            _configuration = configuration;
         }
 
         public async Task<ServiceResult> GetConfig()
@@ -25,13 +30,13 @@ namespace TrustFlow.Core.Services
             try
             {
                 var config = await _smtpConfig.Find(s => s.IsActive == true).FirstOrDefaultAsync();
-               
+
                 return new ServiceResult(true, "SMTP Config retrieved successfully.", config);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to retrieve smtp config.");
-                return new ServiceResult(false, "An internal error occurred while retrieving email config.",null);
+                return new ServiceResult(false, "An internal error occurred while retrieving email config.", null);
             }
         }
 
@@ -204,8 +209,8 @@ namespace TrustFlow.Core.Services
             var subject = "Welcome to TrustFlow!";
             var body = $"<p>Dear {userName},</p>" +
                        "<p>Welcome to TrustFlow! We're excited to have you on board.</p>" +
-                       "<p>Your default password is <strong>trustflow</strong></p>"+
-                       "<p>please change the password on login</p>"+
+                       "<p>Your default password is <strong>trustflow</strong></p>" +
+                       "<p>please change the password on login</p>" +
                        "<p>Best regards,<br/>The TrustFlow Team</p>";
             var emailRequest = new SendEmailRequest
             {
@@ -222,11 +227,23 @@ namespace TrustFlow.Core.Services
             var toEmail = request.To;
             var userName = request.UserName;
             var token = Guid.NewGuid().ToString();
+
+            var value = $"{toEmail}|{DateTime.UtcNow.AddMinutes(15)}";
+            var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value));
+            var response = await _redisCacheService.SetCacheAsync(token, base64, TimeSpan.FromHours(1));
+
+            if (response.Success == false)
+            {
+                return new ServiceResult(false, "Failed to generate password reset token.");
+            }
+
+            var resetTokenUrl = _configuration["ResetPasswordUrl"] + token;
+
             var subject = "TrustFlow Password Reset Request";
-            var url = $"https://trustflow.example.com/reset-password?token={token}";
+
             var body = $"<p>Dear {userName},</p>" +
                        "<p>We received a request to reset your password. Click the link below to reset it:</p>" +
-                       $"<p><a href='{url}'>Reset Password</a></p>" +
+                       $"<p><a href='{resetTokenUrl}'>Reset Password</a></p>" +
                        "<p>If you did not request a password reset, please ignore this email.</p>" +
                        "<p>Best regards,<br/>The TrustFlow Team</p>";
             var emailRequest = new SendEmailRequest

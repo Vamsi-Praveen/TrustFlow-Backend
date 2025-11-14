@@ -5,7 +5,7 @@ namespace TrustFlow.Core.Models
     public class User : BaseEntity
     {
         [BsonElement("Username")]
-        public string Username { get; set; }
+        public string? Username { get; set; }
 
         [BsonElement("Email")]
         public string Email { get; set; }

@@ -229,24 +229,6 @@ namespace TrustFlow.API.Controllers
             return Ok(new APIResponse(true, "User retrieved successfully.", result));
         }
 
-
-        [HttpPost("changepassword")]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePassword changePasswordRequest)
-        {
-            var userId = Id;
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized(new APIResponse(false, "Not authenticated."));
-
-            changePasswordRequest.UserId = userId;
-
-            var result = await _userService.ChangePasswordAsync(changePasswordRequest.UserId, changePasswordRequest.CurrentPassword, changePasswordRequest.NewPassword);
-
-            return ToActionResult(result);
-
-        }
-
-
         [HttpPut("notificationsettings")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
@@ -299,10 +281,30 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-        [HttpPost("InitialSetPassword")]
+        [HttpPost("changepassword")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePassword changePasswordRequest)
+        {
+            var userId = Id;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new APIResponse(false, "Not authenticated."));
+
+            changePasswordRequest.UserId = userId;
+
+            var result = await _userService.ChangePasswordAsync(changePasswordRequest.UserId, changePasswordRequest.CurrentPassword, changePasswordRequest.NewPassword);
+
+            return ToActionResult(result);
+
+        }
+
+
+
+        [HttpPost("InitialSetPassword")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> IntialSetPassword([FromBody] InitialSetPassword initialSetPassword)
         {
@@ -318,20 +320,20 @@ namespace TrustFlow.API.Controllers
         }
 
 
-        //[AllowAnonymous]
-        //[HttpPost("PasswordReset")]
-        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
-        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
-        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
-        //[ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        //public async Task<IActionResult> PasswordReset([FromBody] ChangePassword passwordReset)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
-        //    }
-        //    var result = await _userService.PasswordResetAsync(passwordReset.Email);
-        //    return ToActionResult(result);
-        //}
+        [AllowAnonymous]
+        [HttpPost("VerifyPasswordReset")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> VerifyPasswordReset([FromBody] PasswordResetDto passwordReset)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
+            }
+            var result = await _userService.VerifyResetPassword(passwordReset);
+            return ToActionResult(result);
+        }
     }
 }

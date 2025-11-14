@@ -1,7 +1,9 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using System.Text;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Data;
 using TrustFlow.Core.DTOs;
@@ -17,14 +19,16 @@ namespace TrustFlow.Core.Services
         private readonly IMongoCollection<UserNotificationSetting> _userNotificationSettings;
         private readonly PasswordHelper _passwordHelper;
         private readonly ILogger<UserService> _logger;
+        private readonly RedisCacheService _redisCacheService;
 
-        public UserService(ApplicationContext context, PasswordHelper passwordHelper, ILogger<UserService> logger)
+        public UserService(ApplicationContext context, PasswordHelper passwordHelper, ILogger<UserService> logger, RedisCacheService redisCacheService)
         {
             _users = context.Users;
             _roles = context.RolePermissions;
             _userNotificationSettings = context.UserNotificationSettings;
             _passwordHelper = passwordHelper;
             _logger = logger;
+            _redisCacheService = redisCacheService;
         }
 
         public async Task<ServiceResult> GetUsersAsync()
@@ -40,7 +44,6 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred while retrieving users.");
             }
         }
-
 
         public async Task<ServiceResult> GetCompleteUserById(string id)
         {
@@ -303,7 +306,7 @@ namespace TrustFlow.Core.Services
                     .Set(u => u.Email, updatedUser.Email)
                     .Set(u => u.FirstName, updatedUser.FirstName)
                     .Set(u => u.LastName, updatedUser.LastName)
-                    .Set(u=>u.Username,updatedUser.UserName)
+                    .Set(u => u.Username,updatedUser.UserName)
                     .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
                 var result = await _users.UpdateOneAsync(u => u.Id == id, update);
@@ -621,10 +624,13 @@ namespace TrustFlow.Core.Services
                         _logger.LogWarning($"Role '{roleName}' not found. Skipping user '{email}'.");
                         continue;
                     }
+
+                    var username = email.Split("@")[0].Substring(0, 7);
+
                     var user = new User
                     {
                         Email = email,
-                        Username = email,
+                        Username = username,
                         FirstName = firstName,
                         LastName = lastName,
                         FullName = $"{firstName} {lastName}",
@@ -653,6 +659,54 @@ namespace TrustFlow.Core.Services
             {
                 _logger.LogError(ex, "Error reading CSV file for bulk user creation.");
                 return new ServiceResult(false, "An error occurred while processing the CSV file.");
+            }
+        }
+
+
+        public async Task<ServiceResult> VerifyResetPassword(PasswordResetDto passwordReset)
+        {
+            try
+            {
+                var redisData = await _redisCacheService.GetCacheAsync(passwordReset.Token);
+                if (!redisData.Success)
+                {
+                    return new ServiceResult(false, "Invalid password reset token.");
+                }
+                var tokenEncryptedValue = redisData.Result.ToString();
+                var tokenBytes = Convert.FromBase64String(tokenEncryptedValue);
+                string tokenValue = Encoding.UTF8.GetString(tokenBytes);
+                var email = tokenValue.Split("|")[0];
+                var expiryTimeString = tokenValue.Split("|")[1];
+                var expiryTime = DateTime.Parse(expiryTimeString);
+
+                if (DateTime.UtcNow > expiryTime)
+                {
+                    return new ServiceResult(false, "Password Reset Token Expired");
+                }
+
+                var user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return new ServiceResult(false, $"User with Email ID '{email}' not found.");
+                }
+
+                user.PasswordHash = _passwordHelper.HashPassword(passwordReset.NewPassword);
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await _users.FindOneAndUpdateAsync(userId => userId.Id == user.Id,
+                    Builders<User>.Update
+                    .Set(u => u.PasswordHash, user.PasswordHash)
+                    .Set(u => u.UpdatedAt, user.UpdatedAt)
+                );
+
+                return new ServiceResult(true, "Password Updated Successfully");
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to reset password");
+                return new ServiceResult(false, "An internal error occurred while resetting the password.");
             }
         }
     }
