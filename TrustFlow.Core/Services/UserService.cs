@@ -158,12 +158,6 @@ namespace TrustFlow.Core.Services
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(newUser.Email) || string.IsNullOrWhiteSpace(newUser.Username))
-                {
-                    _logger.LogWarning("Attempted to create user with missing required fields.");
-                    return new ServiceResult(false, "Username, Email are required.");
-                }
-
                 var existing = await _users.Find(u => u.Email.ToLower() == newUser.Email.ToLower() || u.Username.ToLower() == newUser.Username.ToLower()).FirstOrDefaultAsync();
                 if (existing != null)
                 {
@@ -187,7 +181,7 @@ namespace TrustFlow.Core.Services
 
 
                 newUser.FullName = $"{newUser.FirstName} {newUser.LastName}";
-
+                newUser.Username = newUser.Username;
                 newUser.PasswordHash = _passwordHelper.HashPassword("trustflow");
                 newUser.CreatedAt = DateTime.UtcNow;
                 newUser.UpdatedAt = DateTime.UtcNow;
@@ -246,6 +240,7 @@ namespace TrustFlow.Core.Services
                 existingUser.Email = updatedUser.Email;
                 existingUser.FirstName = updatedUser.FirstName;
                 existingUser.LastName = updatedUser.LastName;
+                existingUser.Username = updatedUser.Username;
                 existingUser.IsActive = updatedUser.IsActive;
                 existingUser.Role = updatedUser.Role;
                 existingUser.RoleId = updatedUser.RoleId;
