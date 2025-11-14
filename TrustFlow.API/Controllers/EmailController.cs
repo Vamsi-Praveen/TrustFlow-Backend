@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.DTOs;
 using TrustFlow.Core.Services;
@@ -73,19 +74,19 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-
-        [HttpPost("sendPasswordResetMail")]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [AllowAnonymous]
+        [HttpPost("SendPasswordResetMail")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> SendPasswordResetMail([FromBody] EmailRequest request)
+        public async Task<IActionResult> SendPasswordReset([FromBody] EmailRequest passwordReset)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new APIResponse(false, "Invalid request data provided.", ModelState));
+                return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
             }
-
-            var result = await _emailService.SendPasswordResetMailAsync(request);
+            var result = await _emailService.SendPasswordResetMailAsync(passwordReset);
             return ToActionResult(result);
         }
     }
