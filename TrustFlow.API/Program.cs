@@ -1,6 +1,7 @@
 
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 using TrustFlow.Core.Data;
 using TrustFlow.Core.Helpers;
 using TrustFlow.Core.Models;
@@ -81,6 +82,16 @@ namespace TrustFlow.API
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<ActivityService>();
             builder.Services.AddScoped<LogService>();
+
+            // Register the IConnectionMultiplexer
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                var configuration = builder.Configuration.GetSection("Redis")["ConnectionString"];
+                return ConnectionMultiplexer.Connect(configuration);
+            });
+
+            // Register your RedisCacheService
+            builder.Services.AddSingleton<RedisCacheService>();
 
             var app = builder.Build();
 
