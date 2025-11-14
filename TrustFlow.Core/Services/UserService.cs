@@ -1,5 +1,4 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Office2010.Excel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -301,7 +300,7 @@ namespace TrustFlow.Core.Services
                     .Set(u => u.Email, updatedUser.Email)
                     .Set(u => u.FirstName, updatedUser.FirstName)
                     .Set(u => u.LastName, updatedUser.LastName)
-                    .Set(u => u.Username,updatedUser.UserName)
+                    .Set(u => u.Username, updatedUser.UserName)
                     .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
                 var result = await _users.UpdateOneAsync(u => u.Id == id, update);
@@ -657,12 +656,11 @@ namespace TrustFlow.Core.Services
             }
         }
 
-
-        public async Task<ServiceResult> VerifyResetPassword(PasswordResetDto passwordReset)
+        public async Task<ServiceResult> VerifyResetToken(string token)
         {
             try
             {
-                var redisData = await _redisCacheService.GetCacheAsync(passwordReset.Token);
+                var redisData = await _redisCacheService.GetCacheAsync(token);
                 if (!redisData.Success)
                 {
                     return new ServiceResult(false, "Invalid password reset token.");
@@ -678,6 +676,25 @@ namespace TrustFlow.Core.Services
                 {
                     return new ServiceResult(false, "Password Reset Token Expired");
                 }
+
+                return new ServiceResult(true, "Password Reset Token is Valid", email.ToString());
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to validate password reset token");
+                return new ServiceResult(false, "An internal error occurred while validating the reset token.");
+            }
+        }
+
+
+        public async Task<ServiceResult> VerifyResetPassword(PasswordResetDto passwordReset)
+        {
+            try
+            {
+                var result = await VerifyResetToken(passwordReset.Token);
+
+                var email = result.Result.ToString();
 
                 var user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
 

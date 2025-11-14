@@ -321,8 +321,8 @@ namespace TrustFlow.API.Controllers
 
 
         [AllowAnonymous]
-        [HttpPost("VerifyPasswordReset")]
-        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        [HttpPost("PasswordReset")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
@@ -333,6 +333,22 @@ namespace TrustFlow.API.Controllers
                 return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
             }
             var result = await _userService.VerifyResetPassword(passwordReset);
+            return ToActionResult(result);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("VerifyResetToken")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> VerifyResetToken([FromBody] string token)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
+            }
+            var result = await _userService.VerifyResetToken(token);
             return ToActionResult(result);
         }
     }
