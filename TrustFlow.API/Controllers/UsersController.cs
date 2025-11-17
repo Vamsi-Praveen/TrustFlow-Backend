@@ -127,8 +127,6 @@ namespace TrustFlow.API.Controllers
                 return BadRequest(new APIResponse(false, "Invalid user data provided.", ModelState));
             }
 
-            var azureBlobUrl = await _azureBlobService.UploadImageAsync(id, updatedUser.ProfileImage);
-
             var user = new User
             {
                 Username = updatedUser.Username,
@@ -140,8 +138,7 @@ namespace TrustFlow.API.Controllers
                 Role = updatedUser.Role,
                 RoleId = updatedUser.RoleId,
                 IsActive = updatedUser.IsActive,
-                UpdatedAt = DateTime.UtcNow,
-                ProfilePictureUrl = azureBlobUrl
+                UpdatedAt = DateTime.UtcNow
             };
 
             var result = await _userService.UpdateAsync(id, user);
@@ -159,6 +156,12 @@ namespace TrustFlow.API.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(new APIResponse(false, "Invalid user data provided.", ModelState));
+            }
+
+            if (updatedUser.ProfileImage != null)
+            {
+                var azureBlobUrl = await _azureBlobService.UploadImageAsync(id, updatedUser.ProfileImage);
+                updatedUser.ProfilePicUrl = azureBlobUrl;
             }
 
             var result = await _userService.UpdateProfileAsync(id, updatedUser);

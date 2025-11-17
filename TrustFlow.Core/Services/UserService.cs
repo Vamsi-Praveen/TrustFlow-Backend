@@ -238,14 +238,20 @@ namespace TrustFlow.Core.Services
                     }
                 }
 
-                existingUser.Email = updatedUser.Email;
-                existingUser.FirstName = updatedUser.FirstName;
-                existingUser.LastName = updatedUser.LastName;
-                existingUser.Username = updatedUser.Username;
-                existingUser.IsActive = updatedUser.IsActive;
-                existingUser.Role = updatedUser.Role;
-                existingUser.RoleId = updatedUser.RoleId;
-                existingUser.UpdatedAt = DateTime.UtcNow;
+
+                var update = Builders<User>.Update
+                    .Set(u => u.Email, updatedUser.Email)
+                    .Set(u => u.FirstName, updatedUser.FirstName)
+                    .Set(u => u.LastName, updatedUser.LastName)
+                    .Set(u => u.Username, updatedUser.Username)
+                    .Set(u => u.IsActive, updatedUser.IsActive)
+                    .Set(u => u.Role, updatedUser.Role)
+                    .Set(u => u.RoleId, updatedUser.RoleId)
+                    .Set(u => u.UpdatedAt, DateTime.UtcNow)
+                    .Set(u => u.ProfilePictureUrl, existingUser.ProfilePictureUrl);
+
+
+                var result = await _users.UpdateOneAsync(u => u.Id == id, update);
 
                 if (!string.IsNullOrWhiteSpace(updatedUser.PasswordHash))
                 {
@@ -253,7 +259,6 @@ namespace TrustFlow.Core.Services
                     _logger.LogInformation("Password updated for user: {Username}", existingUser.Username);
                 }
 
-                var result = await _users.ReplaceOneAsync(u => u.Id == id, existingUser);
                 if (result.IsAcknowledged && result.ModifiedCount > 0)
                 {
                     _logger.LogInformation("Successfully updated user: {UserId}", id);

@@ -1,4 +1,6 @@
-﻿namespace TrustFlow.Core.DTOs
+﻿using Microsoft.AspNetCore.Http;
+
+namespace TrustFlow.Core.DTOs
 {
     public class UpdateProfileDTO
     {
@@ -8,5 +10,6 @@
         public string UserName { get; set; }
         public string? PhoneNumber { get; set; }
         public string? ProfilePicUrl { get; set; }
+        public IFormFile? ProfileImage { get; set; }
     }
 }
