@@ -120,7 +120,7 @@ namespace TrustFlow.API.Controllers
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Update(string id, [FromForm] UserDto updatedUser)
+        public async Task<IActionResult> Update(string id, [FromForm] User updatedUser)
         {
             if (!ModelState.IsValid)
             {

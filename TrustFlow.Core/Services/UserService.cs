@@ -244,20 +244,20 @@ namespace TrustFlow.Core.Services
                     .Set(u => u.FirstName, updatedUser.FirstName)
                     .Set(u => u.LastName, updatedUser.LastName)
                     .Set(u => u.Username, updatedUser.Username)
-                    .Set(u => u.IsActive, updatedUser.IsActive)
+                    .Set(u => u.IsActive, existingUser.IsActive)
                     .Set(u => u.Role, updatedUser.Role)
                     .Set(u => u.RoleId, updatedUser.RoleId)
                     .Set(u => u.UpdatedAt, DateTime.UtcNow)
                     .Set(u => u.ProfilePictureUrl, existingUser.ProfilePictureUrl);
 
 
-                var result = await _users.UpdateOneAsync(u => u.Id == id, update);
-
                 if (!string.IsNullOrWhiteSpace(updatedUser.PasswordHash))
                 {
                     existingUser.PasswordHash = _passwordHelper.HashPassword(updatedUser.PasswordHash);
                     _logger.LogInformation("Password updated for user: {Username}", existingUser.Username);
                 }
+
+                var result = await _users.UpdateOneAsync(u => u.Id == id, update);
 
                 if (result.IsAcknowledged && result.ModifiedCount > 0)
                 {
