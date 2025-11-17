@@ -51,6 +51,26 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
+        [HttpGet]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllIssues()
+        {
+            var result = await _issueService.GetAllIssuesAsync();
+            return ToActionResult(result);
+        }
+
+        [HttpGet("filters")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetIssueFilters()
+        {
+            var result = await _issueService.GetIssuesRelatedFilters();
+            return ToActionResult(result);
+        }
+
         [HttpPost]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]

@@ -66,7 +66,7 @@ namespace TrustFlow.API.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new APIResponse(false, result.Message));
             }
 
-            return BadRequest(new APIResponse(false, result.Message));
+            return BadRequest(new APIResponse(false, result.Message, result.Result));
         }
 
 
@@ -360,13 +360,13 @@ namespace TrustFlow.API.Controllers
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> VerifyResetToken([FromBody] string token)
+        public async Task<IActionResult> VerifyResetToken([FromBody] VerifyResetToken request)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new APIResponse(false, "Invalid data provided.", ModelState));
             }
-            var result = await _userService.VerifyResetToken(token);
+            var result = await _userService.VerifyResetToken(request.Token);
             return ToActionResult(result);
         }
     }

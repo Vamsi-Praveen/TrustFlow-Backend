@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using TrustFlow.Core.Communication;
@@ -12,6 +13,7 @@ namespace TrustFlow.Core.Services
     {
         private readonly IMongoCollection<Issue> _issues;
         private readonly IMongoCollection<User> _users;
+        private readonly IMongoCollection<Project> _projects;
         private readonly IMongoCollection<IssueStatus> _issueStatus;
         private readonly IMongoCollection<IssuePriority> _issuePriorities;
         private readonly IMongoCollection<IssueType> _issueTypes;
@@ -27,6 +29,7 @@ namespace TrustFlow.Core.Services
             _issuePriorities = context.IssuePriorities;
             _issueTypes = context.IssueTypes;
             _issueSeverities = context.IssueSeverities;
+            _projects = context.Projects;
             _counters = context.Counters;
             _logger = logger;
         }
@@ -143,6 +146,86 @@ namespace TrustFlow.Core.Services
                 ? new ServiceResult(false, "Issue not found.", null)
                 : new ServiceResult(true, "Issue deleted successfully.", null);
         }
+
+        public async Task<ServiceResult> GetAllIssuesAsync()
+        {
+            var issues = await _issues.Find(_ => true).ToListAsync();
+
+            var users = await _users.Find(_ => true).ToListAsync();
+            var projects = await _projects.Find(_ => true).ToListAsync();
+
+            var userDict = users.ToDictionary(u => u.Id.ToString(), u => u.FullName);
+            var projectDict = projects.ToDictionary(p => p.Id.ToString(), p => p.Name);
+
+            var mappedIssues = issues.Select(issue => new
+            {
+                issue.Id,
+                issue.CreatedAt,
+                issue.UpdatedAt,
+                issue.Title,
+                issue.Description,
+                issue.IssueId,
+
+                issue.ProjectId,
+                ProjectName = projectDict.ContainsKey(issue.ProjectId.ToString())
+            ? projectDict[issue.ProjectId.ToString()]
+            : "Unknown Project",
+
+               issue.ReporterUserId,
+                ReporterUserName = userDict.ContainsKey(issue.ReporterUserId.ToString())
+            ? userDict[issue.ReporterUserId.ToString()]
+            : "Unknown Reporter",
+
+                issue.AssigneeUserIds,
+                AssigneeUserNames = issue.AssigneeUserIds
+            .Select(uid => userDict.ContainsKey(uid.ToString())
+                ? userDict[uid.ToString()]
+                : "Unknown User")
+            .ToList(),
+
+                issue.Status,
+                issue.Priority,
+                issue.Severity,
+                issue.Type,
+                issue.Comments,
+                issue.Attachments,
+                issue.LinkedIssues
+            }).ToList();
+
+
+            return new ServiceResult(true, "Issues fetched succesfully", mappedIssues);
+        }
+
+        public async Task<ServiceResult> GetIssuesRelatedFilters()
+        {
+            var projects = await _projects.Find(_ => true).ToListAsync();
+            var statuses = await _issueStatus.Find(_ => true).ToListAsync();
+            var priorities = await _issuePriorities.Find(_ => true).ToListAsync();
+
+            var filters = new
+            {
+                Projects = projects.Select(p => new
+                {
+                    Id = p.Id.ToString(),
+                    Name = p.Name
+                }),
+
+                Statuses = statuses.Select(s => new
+                {
+                    Id = s.Id.ToString(),
+                    Name = s.Name
+                }),
+
+                Priorities = priorities.Select(pr => new
+                {
+                    Id = pr.Id.ToString(),
+                    Name = pr.Name
+                })
+            };
+
+            return new ServiceResult(true, "Filters fetched successfully", filters);
+        }
+
 
         public async Task<ServiceResult> GetIssueDetailsAsync(string issueId)
         {

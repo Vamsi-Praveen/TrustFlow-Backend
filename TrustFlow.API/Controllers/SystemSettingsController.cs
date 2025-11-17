@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TrustFlow.Core.Communication;
+using TrustFlow.Core.DTOs;
 using TrustFlow.Core.Models;
 using TrustFlow.Core.Services;
 
@@ -107,6 +108,39 @@ namespace TrustFlow.API.Controllers
             var result = await _systemSettingService.GetIssueConfigurations();
             return ToActionResult(result);
         }
+
+        [HttpPost("create-issue-config")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> CreateIssuesConfig(IssueConfigurations configurations)
+        {
+            var result = await _systemSettingService.CreateIssueConfigurations(configurations); 
+            return ToActionResult(result);
+        }
+
+        [HttpPut("update-issue-config")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> UpdateIssueConfig(IssueConfigurations configurations)
+        {
+            var result = await _systemSettingService.UpdateIssueConfigurations(configurations);
+            return ToActionResult(result);
+        }
+
+        [HttpDelete("delete-issue-config/{itemType}/{id}")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> DeleteIssueConfig(string itemType, string id)
+        {
+            var result = await _systemSettingService.DeleteIssueConfiguration(id, itemType);
+            return ToActionResult(result);
+        }
+
 
     }
 }

@@ -92,7 +92,9 @@ namespace TrustFlow.Core.Services
                     user.CreatedAt,
                     user.UpdatedAt,
                     Permissions = rolePermissions,
-                    user.DefaultPasswordChanged
+                    user.DefaultPasswordChanged,
+                    user.PhoneNumber,
+                    user.ProfilePictureUrl
                 };
 
                 return new ServiceResult(true, "User retrieved successfully.", userResponse);
@@ -301,6 +303,8 @@ namespace TrustFlow.Core.Services
                     .Set(u => u.FirstName, updatedUser.FirstName)
                     .Set(u => u.LastName, updatedUser.LastName)
                     .Set(u => u.Username, updatedUser.UserName)
+                    .Set(u => u.PhoneNumber, updatedUser.PhoneNumber)
+                    .Set(u => u.ProfilePictureUrl, updatedUser.ProfilePicUrl)
                     .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
                 var result = await _users.UpdateOneAsync(u => u.Id == id, update);
@@ -663,7 +667,7 @@ namespace TrustFlow.Core.Services
                 var redisData = await _redisCacheService.GetCacheAsync(token);
                 if (!redisData.Success)
                 {
-                    return new ServiceResult(false, "Invalid password reset token.");
+                    return new ServiceResult(false, "Password Reset Token is not valid", new { state = "invalid" });
                 }
                 var tokenEncryptedValue = redisData.Result.ToString();
                 var tokenBytes = Convert.FromBase64String(tokenEncryptedValue);
@@ -674,10 +678,10 @@ namespace TrustFlow.Core.Services
 
                 if (DateTime.UtcNow > expiryTime)
                 {
-                    return new ServiceResult(false, "Password Reset Token Expired");
+                    return new ServiceResult(false, "Password Reset Token Expired", new { state = "expired" });
                 }
 
-                return new ServiceResult(true, "Password Reset Token is Valid", email.ToString());
+                return new ServiceResult(true, "Password Reset Token is Valid", new { state = "valid", email });
 
             }
             catch (Exception ex)
@@ -694,7 +698,9 @@ namespace TrustFlow.Core.Services
             {
                 var result = await VerifyResetToken(passwordReset.Token);
 
-                var email = result.Result.ToString();
+                dynamic data = result.Result;
+
+                string email = data.email;
 
                 var user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
 
@@ -711,6 +717,14 @@ namespace TrustFlow.Core.Services
                     .Set(u => u.PasswordHash, user.PasswordHash)
                     .Set(u => u.UpdatedAt, user.UpdatedAt)
                 );
+
+
+                var res = await _redisCacheService.RemoveCacheAsync(passwordReset.Token);
+
+                if (!res.Success)
+                {
+                    _logger.LogError("Unable to remove token from redis");
+                }
 
                 return new ServiceResult(true, "Password Updated Successfully");
 
