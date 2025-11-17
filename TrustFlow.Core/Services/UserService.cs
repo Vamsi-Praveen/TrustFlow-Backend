@@ -735,5 +735,19 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred while resetting the password.");
             }
         }
+
+        public async Task<ServiceResult> GetUserCountAsync()
+        {
+            try
+            {
+                var count = await _users.CountDocumentsAsync(_ => true);
+                return new ServiceResult(true, "Get User Count Success", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve user count.");
+                return new ServiceResult(true, ex.Message);
+            }
+        }
     }
 }

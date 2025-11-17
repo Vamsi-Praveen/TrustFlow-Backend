@@ -209,5 +209,43 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred while deleting the role.");
             }
         }
+
+        public async Task<ServiceResult> GetRolesCountAsync()
+        {
+            try
+            {
+                var count = await _roles.CountDocumentsAsync(_ => true);
+                return new ServiceResult(true, "Roles count retrieved successfully.", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve roles count.");
+                return new ServiceResult(false, "An internal error occurred while retrieving roles count.");
+            }
+        }
+
+        public async Task<ServiceResult> GetRoleOverviewAsync()
+        {
+            try
+            {
+                var roles = await _roles.Find(_ => true).ToListAsync();
+                var overviewData = new List<object>();
+                foreach (var role in roles)
+                {
+                    var userCount = await _users.CountDocumentsAsync(u => u.Role.ToLower() == role.RoleName.ToLower());
+                    overviewData.Add(new
+                    {
+                        name = role.RoleName,
+                        count = userCount
+                    });
+                }
+                return new ServiceResult(true, "Role overview retrieved successfully.", overviewData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve role overview.");
+                return new ServiceResult(false, "An internal error occurred while retrieving role overview.");
+            }
+        }
     }
 }

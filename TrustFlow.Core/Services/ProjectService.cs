@@ -323,5 +323,38 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred while removing a member.");
             }
         }
+
+        public async Task<ServiceResult> GetProjectsCountAsync()
+        {
+            try
+            {
+                var count = await _projects.CountDocumentsAsync(_ => true);
+                return new ServiceResult(true, "Projects count retrieved successfully.", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve projects count.");
+                return new ServiceResult(false, "An internal error occurred while retrieving projects count.");
+            }
+        }
+
+        public async Task<ServiceResult> GetProjectsCountByUserId(string userId)
+        {
+            try
+            {
+                var filter = Builders<Project>.Filter.Or(
+                Builders<Project>.Filter.Eq(p => p.LeadUserId, userId),
+                Builders<Project>.Filter.ElemMatch(p => p.Members, m => m.UserId == userId)
+                );
+
+                var count = await _projects.CountDocumentsAsync(filter);
+                return new ServiceResult(true, "User's projects count retrieved successfully.", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve projects count for user ID: {UserId}", userId);
+                return new ServiceResult(false, "An internal error occurred while retrieving user's projects count.");
+            }
+        }
     }
 }

@@ -338,5 +338,177 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "Error retrieving user-wise issue analytics.", null);
             }
         }
+
+        public async Task<ServiceResult> GetIssuesCreatedTodayCountAsync()
+        {
+            try
+            {
+                var issuesList = await _issues.Find(i => true).ToListAsync();
+                foreach (var issue in issuesList)
+                {
+                    if (issue.CreatedAt.Date == DateTime.Now.Date)
+                    {
+                        _logger.LogInformation("Issue {IssueId} created at {CreatedAt}.", issue.Id, issue.CreatedAt);
+                    }
+                }
+                var start = DateTime.Today;
+                var end = start.AddDays(1);
+
+                var issuesCount = await _issues.CountDocumentsAsync(
+                    i => i.CreatedAt >= start && i.CreatedAt < end
+                );
+                _logger.LogInformation("Retrieved all issues. Count: {Count}.", issuesCount);
+                return new ServiceResult(true, "Get All Issues Successful", issuesCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all issues.");
+                return new ServiceResult(false, "Error retrieving all issues.", null);
+            }
+        }
+
+        public async Task<ServiceResult> GetIssuesCountAsync()
+        {
+            try
+            {
+                var issuesCount = await _issues.CountDocumentsAsync(i => true);
+                _logger.LogInformation("Retrieved all issues. Count: {Count}.", issuesCount);
+                return new ServiceResult(true, "Get All Issues Successful", issuesCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all issues.");
+                return new ServiceResult(false, "Error retrieving all issues.", null);
+            }
+        }
+
+        public async Task<ServiceResult> GetOpenIssuesCountByUserId(string userId)
+        {
+            try
+            {
+                var filter = Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId);
+
+                var count = await _issues.CountDocumentsAsync(filter);
+
+                return new ServiceResult(true, "Get Open Issues Count by User Id Successful", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving open issues count for user {UserId}.", userId);
+                return new ServiceResult(false, "Error retrieving open issues count.", null);
+            }
+        }
+
+        public async Task<ServiceResult> GetFixedIssuesCountByUserId(string userId)
+        {
+            try
+            {
+                var filter = Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId);
+
+                var count = await _issues.CountDocumentsAsync(filter);
+
+                return new ServiceResult(true, "Get Open Issues Count by User Id Successful", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving open issues count for user {UserId}.", userId);
+                return new ServiceResult(false, "Error retrieving open issues count.", null);
+            }
+        }
+
+        public async Task<ServiceResult> GetRecentIssuesCountByUserId(string userId)
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+                var last24Hours = now.AddHours(-24);
+
+                var filter = Builders<Issue>.Filter.And(
+                    Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId),
+                    Builders<Issue>.Filter.Gte(i => i.CreatedAt, last24Hours)
+                );
+
+                var count = await _issues.CountDocumentsAsync(filter);
+
+                return new ServiceResult(true, "Get Open Issues Count by User Id Successful", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving open issues count for user {UserId}.", userId);
+                return new ServiceResult(false, "Error retrieving open issues count.", null);
+            }
+        }
+
+        public async Task<ServiceResult> GetUserOpenIssuesListAsync(string userId)
+        {
+            try
+            {
+                var issueStatus = Builders<IssueStatus>.Filter.Eq(s => s.Name, "Open");
+
+                var status = await _issueStatus.Find(issueStatus).FirstOrDefaultAsync();
+
+                var filter = Builders<Issue>.Filter.And(
+                    Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId),
+                    Builders<Issue>.Filter.Eq(i => i.Status, status.Id)
+                );
+
+                var issues = await _issues.Find(filter).ToListAsync();
+
+                List<object> issuesDto = new List<object>();
+
+                var projectsList = await _projects.Find(_ => true).ToListAsync();
+
+                var projectsDictionary = projectsList.ToDictionary(u => u.Id, u => u.Name);
+
+                var issuePrioritiesList = await _issuePriorities.Find(_ => true).ToListAsync();
+
+                var issuePrioritiesDictionary = issuePrioritiesList.ToDictionary(u => u.Id, u => u.Name);
+
+                foreach (var issue in issues)
+                {
+                    string projectName;
+
+                    string priority;
+
+                    if (!projectsDictionary.TryGetValue(issue.ProjectId, out projectName))
+                    {
+                        projectName = "System";
+                    }
+
+                    if (!issuePrioritiesDictionary.TryGetValue(issue.Priority, out priority))
+                    {
+                        priority = "Medium";
+                    }
+
+                    issuesDto.Add(new
+                    {
+                        id = issue.IssueId,
+                        title = issue.Description,
+                        project = projectName,
+                        priority = priority,
+                    });
+                }
+                return new ServiceResult(true, "Get User Open Issues Successful", issuesDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving open issues for user {UserId}.", userId);
+                return new ServiceResult(false, "Error retrieving open issues.", null);
+            }
+        }
+
+        public async Task<ServiceResult> GetUserCountAsync()
+        {
+            try
+            {
+                var count = await _users.CountDocumentsAsync(_ => true);
+                return new ServiceResult(true, "Get User Count Success", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve user count.");
+                return new ServiceResult(true, ex.Message);
+            }
+        }
     }
 }
