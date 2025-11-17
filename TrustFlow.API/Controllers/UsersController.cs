@@ -17,11 +17,13 @@ namespace TrustFlow.API.Controllers
     {
         private readonly UserService _userService;
         private readonly ILogger<UsersController> _logger;
+        private readonly AzureBlobService _azureBlobService;
 
-        public UsersController(UserService userService, ILogger<UsersController> logger)
+        public UsersController(UserService userService, ILogger<UsersController> logger, AzureBlobService azureBlobService)
         {
             _userService = userService;
             _logger = logger;
+            _azureBlobService = azureBlobService;
         }
 
         private IActionResult ToActionResult(ServiceResult result)
@@ -99,7 +101,6 @@ namespace TrustFlow.API.Controllers
             {
                 return BadRequest(new APIResponse(false, "Invalid user data provided.", ModelState));
             }
-
             var result = await _userService.CreateAsync(newUser);
 
             if (result.Success)
@@ -112,21 +113,38 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-
+        [AllowAnonymous]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Update(string id, [FromBody] User updatedUser)
+        public async Task<IActionResult> Update(string id, [FromForm] UserDto updatedUser)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new APIResponse(false, "Invalid user data provided.", ModelState));
             }
 
-            var result = await _userService.UpdateAsync(id, updatedUser);
+            var azureBlobUrl = await _azureBlobService.UploadImageAsync(id, updatedUser.ProfileImage);
+
+            var user = new User
+            {
+                Username = updatedUser.Username,
+                Email = updatedUser.Email,
+                FullName = updatedUser.FullName,
+                PhoneNumber = updatedUser.PhoneNumber,
+                FirstName = updatedUser.FirstName,
+                LastName = updatedUser.LastName,
+                Role = updatedUser.Role,
+                RoleId = updatedUser.RoleId,
+                IsActive = updatedUser.IsActive,
+                UpdatedAt = DateTime.UtcNow,
+                ProfilePictureUrl = azureBlobUrl
+            };
+
+            var result = await _userService.UpdateAsync(id, user);
             return ToActionResult(result);
         }
 

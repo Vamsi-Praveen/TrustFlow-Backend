@@ -92,6 +92,7 @@ namespace TrustFlow.API
 
             // Register your RedisCacheService
             builder.Services.AddSingleton<RedisCacheService>();
+            builder.Services.AddScoped<AzureBlobService>();
 
             var app = builder.Build();
 
