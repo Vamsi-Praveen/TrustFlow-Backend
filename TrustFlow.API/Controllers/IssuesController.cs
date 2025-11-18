@@ -86,7 +86,7 @@ namespace TrustFlow.API.Controllers
             if (result.Success)
             {
                 var createdIssue = result.Result as Issue;
-                return CreatedAtAction(nameof(GetIssue), new { id = createdIssue?.Id }, new APIResponse(true, result.Message, createdIssue));
+                return CreatedAtAction(nameof(GetAllIssues), new { id = createdIssue?.Id }, new APIResponse(true, result.Message, createdIssue));
             }
 
             return ToActionResult(result);

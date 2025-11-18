@@ -6,7 +6,7 @@ namespace TrustFlow.Core.Models
     public class Issue : BaseEntity
     {
         [BsonElement("IssueId")]
-        public string IssueId { get; set; }
+        public string? IssueId { get; set; }
 
         [BsonElement("Title")]
         public string Title { get; set; }

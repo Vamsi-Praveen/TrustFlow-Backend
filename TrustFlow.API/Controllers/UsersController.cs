@@ -113,14 +113,13 @@ namespace TrustFlow.API.Controllers
             return ToActionResult(result);
         }
 
-        [AllowAnonymous]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Update(string id, [FromForm] User updatedUser)
+        public async Task<IActionResult> Update(string id, [FromBody] User updatedUser)
         {
             if (!ModelState.IsValid)
             {
@@ -151,7 +150,7 @@ namespace TrustFlow.API.Controllers
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateProfile(string id, [FromBody] UpdateProfileDTO updatedUser)
+        public async Task<IActionResult> UpdateProfile(string id, [FromForm] UpdateProfileDTO updatedUser)
         {
             if (!ModelState.IsValid)
             {

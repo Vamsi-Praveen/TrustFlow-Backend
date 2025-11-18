@@ -82,6 +82,7 @@ namespace TrustFlow.API
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<ActivityService>();
             builder.Services.AddScoped<LogService>();
+            builder.Services.AddScoped<ProjectDetailsService>();
 
             // Register the IConnectionMultiplexer
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
