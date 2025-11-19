@@ -1,13 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TrustFlow.Core.Models;
 using TrustFlow.Core.Services;
 
 namespace TrustFlow.API.Controllers
 {
-    //[Authorize(Roles = "Administrator")]
     [Route("api/[controller]")]
     [ApiController]
-    public class DashBoardController : BaseController
+    public class DashBoardController : BaseController<DashBoardController>
     {
         private readonly UserService _userService;
         private readonly RolePermissionService _rolePermissionService;
@@ -18,7 +16,8 @@ namespace TrustFlow.API.Controllers
             RolePermissionService rolePermissionService,
             ProjectService projectService,
             IssueService issueService,
-            LogService logService)
+            ILogger<DashBoardController> logger,
+            LogService logService):base(logService,logger)
         {
             _userService = userService;
             _rolePermissionService = rolePermissionService;
@@ -26,6 +25,7 @@ namespace TrustFlow.API.Controllers
             _issueService = issueService;
             _logService = logService;
         }
+
         [HttpGet("GetDashboardStats")]
         public async Task<IActionResult> GetDashboardStats()
         {

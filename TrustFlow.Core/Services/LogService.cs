@@ -1,11 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Data;
 using TrustFlow.Core.DTOs;
@@ -66,7 +60,7 @@ namespace TrustFlow.Core.Services
             try
             {
                 var logs = await _logCollection.Find(_ => true)
-                                               .SortByDescending(log => log.Timestamp)
+                                               .SortByDescending(log => log.CreatedAt)
                                                .Limit(limit)
                                                .ToListAsync();
                 return new ServiceResult(true, "Logs fetched successfully", logs);
@@ -83,7 +77,7 @@ namespace TrustFlow.Core.Services
             try
             {
                 var logs = await _logCollection.Find(_ => true)
-                                               .SortByDescending(log => log.Timestamp)
+                                               .SortByDescending(log => log.CreatedAt)
                                                .Limit(count)
                                                .ToListAsync();
 
@@ -104,13 +98,13 @@ namespace TrustFlow.Core.Services
 
                     recentLogs.Add(new RecentActivityDTO
                     {
-                        Id= log.Id,
+                        Id = log.Id,
                         User = userName,
                         Action = log.Description,
-                        Date = log.Timestamp.ToString("MMM d, yyyy")
+                        Date = log.CreatedAt.ToString("MMM d, yyyy")
                     });
                 }
-                
+
                 return new ServiceResult(true, "Recent activity fetched successfully", recentLogs);
             }
             catch (Exception ex)
@@ -120,12 +114,12 @@ namespace TrustFlow.Core.Services
             }
         }
 
-        public async Task<ServiceResult> GetUserRecentActivityListAsync(string userId, int count=5)
+        public async Task<ServiceResult> GetUserRecentActivityListAsync(string userId, int count = 5)
         {
             try
             {
                 var logs = await _logCollection.Find(log => log.UserId == userId)
-                                               .SortByDescending(log => log.Timestamp)
+                                               .SortByDescending(log => log.CreatedAt)
                                                .Limit(count)
                                                .ToListAsync();
 
@@ -136,7 +130,7 @@ namespace TrustFlow.Core.Services
                     recentLogs.Add(new
                     {
                         log.Description,
-                        Date = GetTimeDifference(log.Timestamp)
+                        Date = GetTimeDifference(log.CreatedAt)
                     });
                 }
 

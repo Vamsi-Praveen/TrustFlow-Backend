@@ -1,30 +1,50 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using TrustFlow.Core.Models;
+using TrustFlow.Core.Services;
 
 namespace TrustFlow.API.Controllers
 {
-    public abstract class BaseController : ControllerBase
+    public abstract class BaseController<T> : ControllerBase
     {
-        public string Id
+        public readonly LogService _logService;
+        private readonly ILogger<T> _logger;
+        public BaseController(LogService logService, ILogger<T> logger)
         {
-            get { return HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value; }
+            _logService = logService;
+            _logger = logger;
         }
 
-        public string Email
-        {
-            get { return HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email).Value; }
-        }
+        protected string Id =>
+            HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        public string AccessToken
-        {
-            get { return HttpContext.User.Claims.FirstOrDefault(c => c.Type == "Access_Token").Value; }
-        }
+        protected string Email =>
+            HttpContext.User.FindFirstValue(ClaimTypes.Email);
+
+        protected string AccessToken =>
+           HttpContext.User.Claims.FirstOrDefault(c => c.Type == "Access_Token").Value;
+
+        protected string? IpAddress =>
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        protected string? UserAgent =>
+            Request.Headers["User-Agent"].ToString();
 
         [NonAction]
-        protected virtual void SendLog(ActivityLog log)
+        protected async Task LogAsync(ActivityLog log)
         {
-            // Intentionally left blank for derived controllers to implement logging if needed.
+            try
+            {
+                log.UserId = log.UserId ?? Id;
+                log.IpAddress = IpAddress;
+                log.UserAgent = UserAgent;
+
+                await _logService.Pushlog(log);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to write activity log for user {UserId}", log.UserId);
+            }
         }
     }
 }
