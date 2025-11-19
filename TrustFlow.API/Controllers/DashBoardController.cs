@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TrustFlow.Core.Models;
 using TrustFlow.Core.Services;
 
 namespace TrustFlow.API.Controllers
 {
-    //[Authorize(Roles = "Administrator")]
     [Route("api/[controller]")]
     [ApiController]
     public class DashBoardController : BaseController
