@@ -9,7 +9,7 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class IssueService
+    public class IssueService:BaseService<IssueService>
     {
         private readonly IMongoCollection<Issue> _issues;
         private readonly IMongoCollection<User> _users;
@@ -19,9 +19,8 @@ namespace TrustFlow.Core.Services
         private readonly IMongoCollection<IssueType> _issueTypes;
         private readonly IMongoCollection<IssueSeverity> _issueSeverities;
         private readonly IMongoCollection<Counter> _counters;
-        private readonly ILogger<IssueService> _logger;
 
-        public IssueService(ApplicationContext context, ILogger<IssueService> logger)
+        public IssueService(ApplicationContext context, ILogger<IssueService> logger, LogService logService, UserContextService contextService) : base(logService, logger, contextService)
         {
             _issues = context.Issues;
             _users = context.Users;
@@ -31,7 +30,6 @@ namespace TrustFlow.Core.Services
             _issueSeverities = context.IssueSeverities;
             _projects = context.Projects;
             _counters = context.Counters;
-            _logger = logger;
         }
 
         private async Task<int> GetNextSequenceValue(string identifier)

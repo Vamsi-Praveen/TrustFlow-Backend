@@ -12,6 +12,9 @@ namespace TrustFlow.Core.Models
         [BsonElement("category")]
         public string Category { get; set; } = string.Empty;
 
+        [BsonElement("projectId")]
+        public string? ProjectId { get; set; }
+
         [BsonElement("entityType")]
         public string EntityType { get; set; } = string.Empty;
 

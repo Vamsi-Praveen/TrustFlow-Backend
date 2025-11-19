@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using TrustFlow.Core.Communication;
 using TrustFlow.Core.Data;
@@ -140,6 +141,35 @@ namespace TrustFlow.Core.Services
             {
                 _logger.LogError(ex, "Error fetching user recent activity");
                 return new ServiceResult(false, "Error fetching user recent activity: " + ex.Message);
+            }
+        }
+
+        public async Task<ServiceResult> GetProjectRecentActivityListAsync(string projectId,int count = 5)
+        {
+            try
+            {
+                var logs = await _logCollection.Find(log => log.ProjectId == projectId)
+                                               .SortByDescending(log => log.CreatedAt)
+                                               .Limit(count)
+                                               .ToListAsync();
+
+                List<object> recentLogs = new List<object>();
+
+                foreach (var log in logs)
+                {
+                    recentLogs.Add(new
+                    {
+                        log.Description,
+                        Date = GetTimeDifference(log.CreatedAt)
+                    });
+                }
+
+                return new ServiceResult(true, "Project recent activity fetched successfully", recentLogs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching project {projectId} recent activity");
+                return new ServiceResult(false, $"Error fetching project {projectId} recent activity: " + ex.Message);
             }
         }
     }

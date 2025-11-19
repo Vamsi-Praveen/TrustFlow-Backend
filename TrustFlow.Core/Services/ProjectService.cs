@@ -6,17 +6,15 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class ProjectService
+    public class ProjectService:BaseService<ProjectService>
     {
         private readonly IMongoCollection<Project> _projects;
         private readonly IMongoCollection<User> _users;
-        private readonly ILogger<ProjectService> _logger;
 
-        public ProjectService(ApplicationContext context, ILogger<ProjectService> logger)
+        public ProjectService(ApplicationContext context, ILogger<ProjectService> logger,LogService logService, UserContextService contextService) :base(logService,logger, contextService)
         {
             _projects = context.Projects;
             _users = context.Users;
-            _logger = logger;
         }
 
         public async Task<ServiceResult> GetProjectsAsync()
@@ -138,6 +136,22 @@ namespace TrustFlow.Core.Services
                 newProject.Members ??= new List<ProjectMember>();
 
                 await _projects.InsertOneAsync(newProject);
+
+                var activityLog = new ActivityLog()
+                {
+                    Action = "Created",
+                    Category = "Project",
+                    ProjectId = newProject.Id,
+                    Description = $"Project {newProject.Name} is created",
+                    Status = "Success",
+                    EntityType = "Project",
+                    UserId = _userContextService.UserId,
+                    IpAddress = _userContextService.IpAddress,
+                    UserAgent = _userContextService.UserAgent
+                };
+
+                await SendLogAsync(activityLog);
+
                 _logger.LogInformation("Successfully created new project: {ProjectName}", newProject.Name);
                 return new ServiceResult(true, "Project created successfully.", newProject);
             }
@@ -206,6 +220,20 @@ namespace TrustFlow.Core.Services
 
                 if (result.IsAcknowledged && result.ModifiedCount > 0)
                 {
+                    var activityLog = new ActivityLog()
+                    {
+                        Action = "Updated",
+                        Category = "Project",
+                        ProjectId = updatedProject.Id,
+                        Description = $"Project {updatedProject.Name} is updated",
+                        Status = "Success",
+                        EntityType = "Project",
+                        UserId = _userContextService.UserId,
+                        IpAddress = _userContextService.IpAddress,
+                        UserAgent = _userContextService.UserAgent
+                    };
+
+                    await SendLogAsync(activityLog);
                     _logger.LogInformation("Successfully updated project with ID: {ProjectId}", id);
                     return new ServiceResult(true, "Project updated successfully.", updatedProject);
                 }
@@ -231,6 +259,20 @@ namespace TrustFlow.Core.Services
                 var result = await _projects.DeleteOneAsync(p => p.Id == id);
                 if (result.IsAcknowledged && result.DeletedCount > 0)
                 {
+                    var activityLog = new ActivityLog()
+                    {
+                        Action = "Deleted",
+                        Category = "Project",
+                        ProjectId = id,
+                        Description = $"Project with id {id} is deleted",
+                        Status = "Success",
+                        EntityType = "Project",
+                        UserId = _userContextService.UserId,
+                        IpAddress = _userContextService.IpAddress,
+                        UserAgent = _userContextService.UserAgent
+                    };
+
+                    await SendLogAsync(activityLog);
                     _logger.LogInformation("Successfully deleted project with ID: {ProjectId}", id);
                     return new ServiceResult(true, "Project deleted successfully.");
                 }
@@ -280,6 +322,20 @@ namespace TrustFlow.Core.Services
 
                 if (result.IsAcknowledged && result.ModifiedCount > 0)
                 {
+                    var activityLog = new ActivityLog()
+                    {
+                        Action = "Added",
+                        Category = "Project",
+                        ProjectId = projectId,
+                        Description = $"User {newMember.UserName} is added to Project {project.Name}",
+                        Status = "Success",
+                        EntityType = "Project",
+                        UserId = _userContextService.UserId,
+                        IpAddress = _userContextService.IpAddress,
+                        UserAgent = _userContextService.UserAgent
+                    };
+
+                    await SendLogAsync(activityLog);
                     _logger.LogInformation("Successfully added user {MemberUserId} to project {ProjectId}.", newMember.UserId, projectId);
                     return new ServiceResult(true, "Member added successfully.");
                 }
@@ -311,6 +367,20 @@ namespace TrustFlow.Core.Services
 
                 if (result.IsAcknowledged && result.ModifiedCount > 0)
                 {
+                    var activityLog = new ActivityLog()
+                    {
+                        Action = "Removed",
+                        Category = "Project",
+                        ProjectId = projectId,
+                        Description = $"User with {userId} is deleted from Project {projectId}",
+                        Status = "Success",
+                        EntityType = "Project",
+                        UserId = _userContextService.UserId,
+                        IpAddress = _userContextService.IpAddress,
+                        UserAgent = _userContextService.UserAgent
+                    };
+
+                    await SendLogAsync(activityLog);
                     _logger.LogInformation("Successfully removed user {UserId} from project {ProjectId}.", userId, projectId);
                     return new ServiceResult(true, "Member removed successfully.");
                 }

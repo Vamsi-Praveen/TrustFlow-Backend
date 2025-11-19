@@ -69,6 +69,7 @@ namespace TrustFlow.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddHttpContextAccessor();
 
             builder.Services.AddTransient<DbSeeder>();
             builder.Services.AddSingleton<PasswordHelper>();
@@ -83,6 +84,10 @@ namespace TrustFlow.API
             builder.Services.AddScoped<ActivityService>();
             builder.Services.AddScoped<LogService>();
             builder.Services.AddScoped<ProjectDetailsService>();
+            builder.Services.AddScoped<UserContextService>();
+            // Register your RedisCacheService
+            builder.Services.AddSingleton<RedisCacheService>();
+            builder.Services.AddScoped<AzureBlobService>();
 
             // Register the IConnectionMultiplexer
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
@@ -91,9 +96,6 @@ namespace TrustFlow.API
                 return ConnectionMultiplexer.Connect(configuration);
             });
 
-            // Register your RedisCacheService
-            builder.Services.AddSingleton<RedisCacheService>();
-            builder.Services.AddScoped<AzureBlobService>();
 
             var app = builder.Build();
 

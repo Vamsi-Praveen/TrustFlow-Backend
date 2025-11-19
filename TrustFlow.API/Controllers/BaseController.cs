@@ -19,5 +19,11 @@ namespace TrustFlow.API.Controllers
         {
             get { return HttpContext.User.Claims.FirstOrDefault(c => c.Type == "Access_Token").Value; }
         }
+
+        protected string? IpAddress =>
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        protected string? UserAgent =>
+            Request.Headers["User-Agent"].ToString();
     }
 }

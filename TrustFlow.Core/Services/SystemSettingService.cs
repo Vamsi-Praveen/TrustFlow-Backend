@@ -7,24 +7,22 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class SystemSettingService
+    public class SystemSettingService:BaseService<SystemSettingService>
     {
         private readonly TeamsService _teamsService;
         private readonly SlackService _slackService;
         private readonly EmailService _emailService;
-        private readonly ILogger<SystemSettingService> _logger;
         private readonly IMongoCollection<PortalConfig> _portalConfig;
         private readonly IMongoCollection<IssueStatus> _issueStatuses;
         private readonly IMongoCollection<IssuePriority> _issuePriority;
         private readonly IMongoCollection<IssueSeverity> _issueSeverity;
         private readonly IMongoCollection<IssueType> _issueType;
 
-        public SystemSettingService(TeamsService teamsService, SlackService slackService, EmailService emailService, ILogger<SystemSettingService> logger, ApplicationContext context)
+        public SystemSettingService(TeamsService teamsService, SlackService slackService, EmailService emailService, ILogger<SystemSettingService> logger, ApplicationContext context,LogService logService, UserContextService contextService) :base(logService,logger, contextService)
         {
             _teamsService = teamsService;
             _slackService = slackService;
             _emailService = emailService;
-            _logger = logger;
             _portalConfig = context.PortalConfig;
             _issueStatuses = context.IssueStatus;
             _issuePriority = context.IssuePriorities;

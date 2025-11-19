@@ -30,6 +30,10 @@ namespace TrustFlow.API.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> FetchLogs()
         {
             var logs = await _logService.FetchLogs();
@@ -37,6 +41,10 @@ namespace TrustFlow.API.Controllers
         }
 
         [HttpGet("user")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> FetchUserLog([FromQuery] string id)
         {
             var logs = await _logService.GetUserRecentActivityListAsync(id);
@@ -44,9 +52,24 @@ namespace TrustFlow.API.Controllers
         }
 
         [HttpGet("recent")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> FetchRecentLogs([FromQuery] int count = 10)
         {
             var logs = await _logService.GetRecentActivityListAsync(count);
+            return ToActionResult(logs);
+        }
+
+        [HttpGet("projectactivity")]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(APIResponse), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> FetchProjectRelatedActivity([FromQuery] string projectId, int count = 10)
+        {
+            var logs = await _logService.GetProjectRecentActivityListAsync(projectId, count);
             return ToActionResult(logs);
         }
 

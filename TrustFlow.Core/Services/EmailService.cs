@@ -10,16 +10,14 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class EmailService
+    public class EmailService : BaseService<EmailService>
     {
         private readonly IMongoCollection<SMTPConfig> _smtpConfig;
-        private readonly ILogger<EmailService> _logger;
         private readonly RedisCacheService _redisCacheService;
         private readonly IConfiguration _configuration;
 
-        public EmailService(ApplicationContext context, IConfiguration configuration, ILogger<EmailService> logger, RedisCacheService redisCacheService)
+        public EmailService(ApplicationContext context, IConfiguration configuration, RedisCacheService redisCacheService, ILogger<EmailService> logger, LogService logService,UserContextService contextService) : base(logService, logger, contextService)
         {
-            _logger = logger;
             _smtpConfig = context.SMTPConfig;
             _redisCacheService = redisCacheService;
             _configuration = configuration;

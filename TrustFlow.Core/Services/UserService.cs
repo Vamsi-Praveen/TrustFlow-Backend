@@ -11,22 +11,21 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class UserService
+    public class UserService : BaseService<UserService>
     {
         private readonly IMongoCollection<User> _users;
         private readonly IMongoCollection<RolePermission> _roles;
         private readonly IMongoCollection<UserNotificationSetting> _userNotificationSettings;
         private readonly PasswordHelper _passwordHelper;
-        private readonly ILogger<UserService> _logger;
         private readonly RedisCacheService _redisCacheService;
 
-        public UserService(ApplicationContext context, PasswordHelper passwordHelper, ILogger<UserService> logger, RedisCacheService redisCacheService)
+
+        public UserService(ApplicationContext context, PasswordHelper passwordHelper, ILogger<UserService> logger, RedisCacheService redisCacheService, LogService logService,UserContextService contextService) : base(logService, logger,contextService)
         {
             _users = context.Users;
             _roles = context.RolePermissions;
             _userNotificationSettings = context.UserNotificationSettings;
             _passwordHelper = passwordHelper;
-            _logger = logger;
             _redisCacheService = redisCacheService;
         }
 
@@ -202,6 +201,20 @@ namespace TrustFlow.Core.Services
                 };
 
                 await _userNotificationSettings.InsertOneAsync(notificationConfig);
+
+                var activityLog = new ActivityLog()
+                {
+                    Action = "Created",
+                    Category = "Users",
+                    Description = $"User with email {newUser.Email} is created",
+                    Status = "Success",
+                    EntityType = "Authentication",
+                    UserId = _userContextService.UserId,
+                    IpAddress = _userContextService.IpAddress,
+                    UserAgent = _userContextService.UserAgent
+                };
+
+                await SendLogAsync(activityLog);
 
                 _logger.LogInformation("Successfully created new user: {Username}", newUser.Username);
                 return new ServiceResult(true, "User created successfully.", newUser);

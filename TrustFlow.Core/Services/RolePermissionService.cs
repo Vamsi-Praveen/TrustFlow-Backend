@@ -6,15 +6,13 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class RolePermissionService
+    public class RolePermissionService:BaseService<RolePermissionService>
     {
         private readonly IMongoCollection<RolePermission> _roles;
         private readonly IMongoCollection<User> _users;
-        private readonly ILogger<RolePermissionService> _logger;
 
-        public RolePermissionService(ApplicationContext context, ILogger<RolePermissionService> logger)
+        public RolePermissionService(ApplicationContext context, ILogger<RolePermissionService> logger, LogService logService, UserContextService contextService) : base(logService, logger, contextService)
         {
-            _logger = logger;
             _roles = context.RolePermissions;
             _users = context.Users;
         }

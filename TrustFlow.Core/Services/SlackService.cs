@@ -10,15 +10,13 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class SlackService
+    public class SlackService:BaseService<SlackService>
     {
-        private readonly ILogger<SlackService> _logger;
         private readonly IMongoCollection<SlackConfig> _config;
         private readonly HttpClient _httpClient;
 
-        public SlackService(ILogger<SlackService> logger, ApplicationContext context)
+        public SlackService(ILogger<SlackService> logger, ApplicationContext context,LogService logService, UserContextService contextService) :base(logService,logger, contextService)
         {
-            _logger = logger;
             _config = context.SlackConfig;
             _httpClient = new HttpClient();
         }

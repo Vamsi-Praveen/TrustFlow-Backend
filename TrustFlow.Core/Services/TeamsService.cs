@@ -10,15 +10,13 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class TeamsService
+    public class TeamsService:BaseService<TeamsService>
     {
-        private readonly ILogger<TeamsService> _logger;
         private readonly IMongoCollection<TeamsConfig> _config;
         private readonly HttpClient _httpClient;
 
-        public TeamsService(ILogger<TeamsService> logger, ApplicationContext context)
+        public TeamsService(ILogger<TeamsService> logger, ApplicationContext context, LogService logService, UserContextService contextService) : base(logService, logger, contextService)
         {
-            _logger = logger;
             _config = context.TeamsConfig;
             _httpClient = new HttpClient();
         }
