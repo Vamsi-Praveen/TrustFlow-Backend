@@ -6,16 +6,18 @@ using TrustFlow.Core.Services;
 
 namespace TrustFlow.API.Controllers
 {
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Roles ="Administrator")]
     [Route("api/[controller]")]
     [ApiController]
-    public class RolePermissionsController : BaseController<RolePermissionsController>
+    public class RolePermissionsController : BaseController
     {
         private readonly RolePermissionService _rolePermissionService;
+        private readonly ILogger<RolePermissionsController> _logger;
 
-        public RolePermissionsController(RolePermissionService rolePermissionService, ILogger<RolePermissionsController> logger, LogService log) : base(log, logger)
+        public RolePermissionsController(RolePermissionService rolePermissionService, ILogger<RolePermissionsController> logger)
         {
             _rolePermissionService = rolePermissionService;
+            _logger = logger;
         }
 
         private IActionResult ToActionResult(ServiceResult result)

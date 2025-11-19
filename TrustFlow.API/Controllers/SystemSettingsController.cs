@@ -10,14 +10,14 @@ namespace TrustFlow.API.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class SystemSettingsController : BaseController<SystemSettingsController>
+    public class SystemSettingsController : BaseController
     {
         private readonly SystemSettingService _systemSettingService;
         private readonly SlackService _slackService;
         private readonly TeamsService _teamsService;
         private readonly EmailService _emailService;
 
-        public SystemSettingsController(SystemSettingService systemSettingService, SlackService slackService, TeamsService teamsService, EmailService emailService, LogService log, ILogger<SystemSettingsController> logger) : base(log, logger)
+        public SystemSettingsController(SystemSettingService systemSettingService,SlackService slackService,TeamsService teamsService,EmailService emailService)
         {
             _systemSettingService = systemSettingService;
             _slackService = slackService;
@@ -115,7 +115,7 @@ namespace TrustFlow.API.Controllers
         [ProducesResponseType(typeof(APIResponse), StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> CreateIssuesConfig(IssueConfigurations configurations)
         {
-            var result = await _systemSettingService.CreateIssueConfigurations(configurations);
+            var result = await _systemSettingService.CreateIssueConfigurations(configurations); 
             return ToActionResult(result);
         }
 

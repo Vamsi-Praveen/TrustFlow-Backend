@@ -13,14 +13,16 @@ namespace TrustFlow.API.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersController : BaseController<UsersController>
+    public class UsersController : BaseController
     {
         private readonly UserService _userService;
+        private readonly ILogger<UsersController> _logger;
         private readonly AzureBlobService _azureBlobService;
 
-        public UsersController(UserService userService, ILogger<UsersController> logger, AzureBlobService azureBlobService,LogService log) : base(log,logger)
+        public UsersController(UserService userService, ILogger<UsersController> logger, AzureBlobService azureBlobService)
         {
             _userService = userService;
+            _logger = logger;
             _azureBlobService = azureBlobService;
         }
 

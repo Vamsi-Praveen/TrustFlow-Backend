@@ -6,12 +6,11 @@ namespace TrustFlow.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProjectDetailsController : BaseController<ProjectDetailsController>
+    public class ProjectDetailsController : BaseController
     {
         public readonly ProjectDetailsService _projectDetailsService;
 
-        public ProjectDetailsController(ProjectDetailsService projectDetailsService, LogService log, ILogger<ProjectDetailsController> logger) : base(log, logger)
-        {
+        public ProjectDetailsController(ProjectDetailsService projectDetailsService) { 
             _projectDetailsService = projectDetailsService;
         }
 

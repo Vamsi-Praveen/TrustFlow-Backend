@@ -7,13 +7,15 @@ namespace TrustFlow.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class IssuesController : BaseController<IssuesController>
+    public class IssuesController : BaseController
     {
         private readonly IssueService _issueService;
+        private readonly ILogger<IssuesController> _logger;
 
-        public IssuesController(IssueService issueService, ILogger<IssuesController> logger, LogService log) : base(log, logger)
+        public IssuesController(IssueService issueService, ILogger<IssuesController> logger)
         {
             _issueService = issueService;
+            _logger = logger;
         }
 
         private IActionResult ToActionResult(ServiceResult result)

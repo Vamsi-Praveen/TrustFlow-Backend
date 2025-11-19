@@ -9,13 +9,15 @@ namespace TrustFlow.API.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class ProjectsController : BaseController<ProjectsController>
+    public class ProjectsController : BaseController
     {
         private readonly ProjectService _projectService;
+        private readonly ILogger<ProjectsController> _logger;
 
-        public ProjectsController(ProjectService projectService,LogService logService, ILogger<ProjectsController> logger):base(logService, logger)
+        public ProjectsController(ProjectService projectService, ILogger<ProjectsController> logger)
         {
             _projectService = projectService;
+            _logger = logger;
         }
 
         private IActionResult ToActionResult(ServiceResult result)

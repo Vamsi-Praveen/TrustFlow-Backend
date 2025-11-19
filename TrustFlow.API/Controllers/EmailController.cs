@@ -8,13 +8,15 @@ namespace TrustFlow.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class EmailController : BaseController<EmailController>
+    public class EmailController : BaseController
     {
         private readonly EmailService _emailService;
+        private readonly ILogger<EmailController> _logger;
 
-        public EmailController(EmailService emailService, LogService logService, ILogger<EmailController> logger) : base(logService, logger)
+        public EmailController(EmailService emailService, ILogger<EmailController> logger)
         {
             _emailService = emailService;
+            _logger = logger;
         }
         private IActionResult ToActionResult(ServiceResult result)
         {

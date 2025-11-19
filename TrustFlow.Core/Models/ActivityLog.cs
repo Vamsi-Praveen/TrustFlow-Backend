@@ -3,30 +3,34 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace TrustFlow.Core.Models
 {
-    public class ActivityLog : BaseEntity
+    public class ActivityLog
     {
+        [BsonElement("Id")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; }
+
+        [BsonElement("timestamp")]
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
         [BsonElement("userId")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string? UserId { get; set; }
-
-        [BsonElement("category")]
-        public string Category { get; set; } = string.Empty;
+        public string? UserId { get; set; } 
 
         [BsonElement("entityType")]
-        public string EntityType { get; set; } = string.Empty;
+        public string EntityType { get; set; } = string.Empty; 
 
         [BsonElement("entityId")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string? EntityId { get; set; }
+        public string EntityId { get; set; } = string.Empty;
 
-        [BsonElement("action")]
-        public string Action { get; set; } = string.Empty;
+        [BsonElement("actionType")]
+        public string ActionType { get; set; } = string.Empty; 
 
         [BsonElement("oldValue")]
-        public string? OldValue { get; set; }
+        public string? OldValue { get; set; } 
 
         [BsonElement("newValue")]
-        public string? NewValue { get; set; }
+        public string? NewValue { get; set; } 
 
         [BsonElement("description")]
         public string Description { get; set; } = string.Empty;
@@ -37,14 +41,7 @@ namespace TrustFlow.Core.Models
         [BsonElement("userAgent")]
         public string? UserAgent { get; set; }
 
-        [BsonElement("source")]
-        public string Source { get; set; } = "Web";
-
-        [BsonElement("status")]
-        public string Status { get; set; } = "Success";
-
-        [BsonElement("correlationId")]
-        public string? CorrelationId { get; set; }
+        [BsonElement("createdAt")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
-
