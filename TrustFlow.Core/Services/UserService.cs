@@ -18,15 +18,19 @@ namespace TrustFlow.Core.Services
         private readonly IMongoCollection<UserNotificationSetting> _userNotificationSettings;
         private readonly PasswordHelper _passwordHelper;
         private readonly RedisCacheService _redisCacheService;
+        private readonly ProjectService _projectService;
+        private readonly IssueService _issueService;
 
 
-        public UserService(ApplicationContext context, PasswordHelper passwordHelper, ILogger<UserService> logger, RedisCacheService redisCacheService, LogService logService,UserContextService contextService) : base(logService, logger,contextService)
+        public UserService(ApplicationContext context, PasswordHelper passwordHelper, ILogger<UserService> logger, RedisCacheService redisCacheService, LogService logService,UserContextService contextService,ProjectService projectService,IssueService issueService) : base(logService, logger,contextService)
         {
             _users = context.Users;
             _roles = context.RolePermissions;
             _userNotificationSettings = context.UserNotificationSettings;
             _passwordHelper = passwordHelper;
             _redisCacheService = redisCacheService;
+            _projectService = projectService;
+            _issueService = issueService;
         }
 
         public async Task<ServiceResult> GetUsersAsync()
@@ -181,6 +185,7 @@ namespace TrustFlow.Core.Services
 
 
                 newUser.FullName = $"{newUser.FirstName} {newUser.LastName}";
+                newUser.ProfilePictureUrl = $"https://avatar.iran.liara.run/username?username={newUser.FullName}";
                 newUser.Username = newUser.Username;
                 newUser.PasswordHash = _passwordHelper.HashPassword("trustflow");
                 newUser.CreatedAt = DateTime.UtcNow;
@@ -351,7 +356,55 @@ namespace TrustFlow.Core.Services
                     return new ServiceResult(false, "User ID cannot be empty.");
                 }
 
+                var projectCheck = await _projectService.IsUserExistInProject(id);
+
+                if (!projectCheck.Success)
+                {
+                    _logger.LogError("Failed to validate project association for user {UserId}", id);
+                    return new ServiceResult(false, "Unable to verify user project associations.");
+                }
+
+                if (projectCheck.Result == null)
+                {
+                    _logger.LogWarning("Project check returned null for user {UserId}", id);
+                    return new ServiceResult(false, "Unexpected error occurred while checking user projects.");
+                }
+
+                bool isExistInProject = (bool)projectCheck.Result;
+
+                if (isExistInProject)
+                {
+                    var issueCheck = await _issueService.IsUserHasIssues(id);
+
+                    if (!issueCheck.Success)
+                    {
+                        _logger.LogError("Failed to validate issue assignments for user {UserId}", id);
+                        return new ServiceResult(false, "Unable to verify user issue assignments.");
+                    }
+
+                    if (issueCheck.Result == null)
+                    {
+                        _logger.LogWarning("Issue check returned null for user {UserId}", id);
+                        return new ServiceResult(false, "Unexpected error occurred while checking user issues.");
+                    }
+
+                    bool hasIssues = (bool)issueCheck.Result;
+
+                    if (hasIssues)
+                    {
+                        return new ServiceResult(false,
+                            "User cannot be deleted because there are open issues assigned to them. " +
+                            "Reassign or close those issues before deleting.");
+                    }
+
+                    return new ServiceResult(false,
+                        "User cannot be deleted because they are associated with one or more projects. " +
+                        "Remove them as Lead/Manager/Member before deleting.");
+                }
+
+               
                 var result = await _users.DeleteOneAsync(u => u.Id == id);
+
                 if (result.IsAcknowledged && result.DeletedCount > 0)
                 {
                     _logger.LogInformation("Successfully deleted user with ID: {UserId}", id);
@@ -366,6 +419,7 @@ namespace TrustFlow.Core.Services
                 return new ServiceResult(false, "An internal error occurred while deleting the user.");
             }
         }
+
 
         public async Task<ServiceResult> AuthenticateAsync(string username, string password)
         {

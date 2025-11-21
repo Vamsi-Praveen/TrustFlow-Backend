@@ -17,11 +17,15 @@ namespace TrustFlow.Core.Models
 
         public string? LeadUserName { get; set; }
 
+        public string? LeadProfilePicUrl { get; set; }
+
         [BsonElement("ManagerUserId")]
         [BsonRepresentation(BsonType.ObjectId)]
         public string ManagerUserId { get; set; }
 
         public string? ManagerUserName { get; set; }
+
+        public string? ManagerProfilePicUrl { get; set; }
 
         [BsonElement("Members")]
         public List<ProjectMember> Members { get; set; } = new List<ProjectMember>();

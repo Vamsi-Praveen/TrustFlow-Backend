@@ -19,5 +19,7 @@ namespace TrustFlow.Core.Models
         public string? UserName{ get; set; }
 
         public string? UserEmail { get; set; }
+
+        public string? ProfilePicUrl { get; set; }
     }
 }

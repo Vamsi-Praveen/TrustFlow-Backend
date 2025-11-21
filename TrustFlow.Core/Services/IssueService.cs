@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using TrustFlow.Core.Communication;
@@ -9,7 +8,7 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class IssueService:BaseService<IssueService>
+    public class IssueService : BaseService<IssueService>
     {
         private readonly IMongoCollection<Issue> _issues;
         private readonly IMongoCollection<User> _users;
@@ -169,7 +168,7 @@ namespace TrustFlow.Core.Services
             ? projectDict[issue.ProjectId.ToString()]
             : "Unknown Project",
 
-               issue.ReporterUserId,
+                issue.ReporterUserId,
                 ReporterUserName = userDict.ContainsKey(issue.ReporterUserId.ToString())
             ? userDict[issue.ReporterUserId.ToString()]
             : "Unknown Reporter",
@@ -506,6 +505,30 @@ namespace TrustFlow.Core.Services
             {
                 _logger.LogError(ex, "Failed to retrieve user count.");
                 return new ServiceResult(true, ex.Message);
+            }
+        }
+
+        public async Task<ServiceResult> IsUserHasIssues(string userId)
+        {
+            try
+            {
+                var openStatus = await _issueStatus
+                        .Find(s => s.Name == "Open")
+                        .FirstOrDefaultAsync();
+
+                var filter = Builders<Issue>.Filter.And(
+                    Builders<Issue>.Filter.AnyEq(i => i.AssigneeUserIds, userId),
+                    Builders<Issue>.Filter.Eq(i => i.Status, openStatus.Id)
+                );
+
+                bool hasOpenIssues = await _issues.Find(filter).AnyAsync();
+
+                return new ServiceResult(true, "Succesfully Verfied user has open issues", hasOpenIssues);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check user assigned in issues.");
+                return new ServiceResult(false, ex.Message, null);
             }
         }
     }

@@ -6,12 +6,12 @@ using TrustFlow.Core.Models;
 
 namespace TrustFlow.Core.Services
 {
-    public class ProjectService:BaseService<ProjectService>
+    public class ProjectService : BaseService<ProjectService>
     {
         private readonly IMongoCollection<Project> _projects;
         private readonly IMongoCollection<User> _users;
 
-        public ProjectService(ApplicationContext context, ILogger<ProjectService> logger,LogService logService, UserContextService contextService) :base(logService,logger, contextService)
+        public ProjectService(ApplicationContext context, ILogger<ProjectService> logger, LogService logService, UserContextService contextService) : base(logService, logger, contextService)
         {
             _projects = context.Projects;
             _users = context.Users;
@@ -106,6 +106,7 @@ namespace TrustFlow.Core.Services
                 if (!string.IsNullOrWhiteSpace(newProject.LeadUserId))
                 {
                     var leadUser = await _users.Find(u => u.Id == newProject.LeadUserId).FirstOrDefaultAsync();
+                    newProject.LeadProfilePicUrl = leadUser.ProfilePictureUrl;
                     if (leadUser == null)
                     {
                         _logger.LogWarning("Attempted to create project with invalid LeadUserId: {LeadUserId}", newProject.LeadUserId);
@@ -120,6 +121,7 @@ namespace TrustFlow.Core.Services
                 if (!string.IsNullOrWhiteSpace(newProject.ManagerUserId))
                 {
                     var manager = await _users.Find(u => u.Id == newProject.ManagerUserId).FirstOrDefaultAsync();
+                    newProject.ManagerProfilePicUrl = manager.ProfilePictureUrl;
                     if (manager == null)
                     {
                         _logger.LogWarning("Attempted to create project with invalid ManagerUserId: {ManagerUserId}", newProject.ManagerUserId);
@@ -167,85 +169,95 @@ namespace TrustFlow.Core.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(id))
-                {
                     return new ServiceResult(false, "Project ID is required for update.");
-                }
 
                 var getResult = await GetProjectByIdAsync(id);
                 if (!getResult.Success)
-                {
                     return getResult;
-                }
+
                 var existingProject = (Project)getResult.Result;
 
                 if (string.IsNullOrWhiteSpace(updatedProject.Name))
-                {
                     return new ServiceResult(false, "Project name cannot be empty.");
-                }
 
                 if (existingProject.Name.ToLower() != updatedProject.Name.ToLower())
                 {
-                    var duplicateNameProject = await _projects.Find(p => p.Id != id && p.Name.ToLower() == updatedProject.Name.ToLower()).FirstOrDefaultAsync();
-                    if (duplicateNameProject != null)
-                    {
-                        return new ServiceResult(false, $"A project with the name '{updatedProject.Name}' already exists.");
-                    }
+                    var duplicateName = await _projects
+                        .Find(p => p.Id != id && p.Name.ToLower() == updatedProject.Name.ToLower())
+                        .FirstOrDefaultAsync();
+
+                    if (duplicateName != null)
+                        return new ServiceResult(false, $"A project named '{updatedProject.Name}' already exists.");
                 }
 
-                if (existingProject.LeadUserId != updatedProject.LeadUserId && !string.IsNullOrWhiteSpace(updatedProject.LeadUserId))
+                if (existingProject.LeadUserId != updatedProject.LeadUserId &&
+                    !string.IsNullOrWhiteSpace(updatedProject.LeadUserId))
                 {
                     var leadUser = await _users.Find(u => u.Id == updatedProject.LeadUserId).FirstOrDefaultAsync();
+                    updatedProject.LeadUserName = leadUser.Username;
+                    updatedProject.LeadProfilePicUrl = leadUser.ProfilePictureUrl;
                     if (leadUser == null)
-                    {
-                        return new ServiceResult(false, $"The specified new Lead User with ID '{updatedProject.LeadUserId}' was not found.");
-                    }
+                        return new ServiceResult(false, $"Lead User ID '{updatedProject.LeadUserId}' not found.");
                 }
 
-                if (existingProject.ManagerUserId != updatedProject.ManagerUserId && !string.IsNullOrWhiteSpace(updatedProject.ManagerUserId))
+                if (existingProject.ManagerUserId != updatedProject.ManagerUserId &&
+                    !string.IsNullOrWhiteSpace(updatedProject.ManagerUserId))
                 {
                     var manager = await _users.Find(u => u.Id == updatedProject.ManagerUserId).FirstOrDefaultAsync();
+                    updatedProject.ManagerUserName = manager.Username;
+                    updatedProject.ManagerProfilePicUrl = manager.ProfilePictureUrl;
                     if (manager == null)
-                    {
-                        return new ServiceResult(false, $"The specified new Manager User with ID '{updatedProject.ManagerUserId}' was not found.");
-                    }
+                        return new ServiceResult(false, $"Manager User ID '{updatedProject.ManagerUserId}' not found.");
                 }
 
-                updatedProject.Id = id;
-                updatedProject.CreatedAt = existingProject.CreatedAt;
-                updatedProject.UpdatedAt = DateTime.UtcNow;
-                updatedProject.Members ??= new List<ProjectMember>();
+                var updateDef = Builders<Project>.Update
+                    .Set(p => p.Name, updatedProject.Name)
+                    .Set(p => p.Description, updatedProject.Description)
+                    .Set(p => p.LeadUserId, updatedProject.LeadUserId)
+                    .Set(p => p.LeadUserName, updatedProject.LeadUserName)
+                    .Set(p => p.LeadProfilePicUrl, updatedProject.LeadProfilePicUrl)
+                    .Set(p => p.ManagerUserId, updatedProject.ManagerUserId)
+                    .Set(p => p.ManagerUserName, updatedProject.ManagerUserName)
+                    .Set(p => p.ManagerProfilePicUrl, updatedProject.ManagerProfilePicUrl)
+                    .Set(p => p.Members, updatedProject.Members ?? existingProject.Members)
+                    .Set(p => p.UpdatedAt, DateTime.UtcNow);
 
+                var result = await _projects.UpdateOneAsync(
+                    p => p.Id == id,
+                    updateDef
+                );
 
-                var result = await _projects.ReplaceOneAsync(p => p.Id == id, updatedProject);
-
-                if (result.IsAcknowledged && result.ModifiedCount > 0)
+                if (result.ModifiedCount > 0)
                 {
                     var activityLog = new ActivityLog()
                     {
                         Action = "Updated",
                         Category = "Project",
-                        ProjectId = updatedProject.Id,
-                        Description = $"Project {updatedProject.Name} is updated",
-                        Status = "Success",
+                        ProjectId = id,
+                        Description = $"Project '{updatedProject.Name}' updated successfully",
                         EntityType = "Project",
+                        Status = "Success",
                         UserId = _userContextService.UserId,
                         IpAddress = _userContextService.IpAddress,
                         UserAgent = _userContextService.UserAgent
                     };
 
                     await SendLogAsync(activityLog);
-                    _logger.LogInformation("Successfully updated project with ID: {ProjectId}", id);
+
+                    _logger.LogInformation("Project updated: {ProjectId}", id);
+
                     return new ServiceResult(true, "Project updated successfully.", updatedProject);
                 }
 
-                return new ServiceResult(false, "No changes were detected for the project.");
+                return new ServiceResult(false, "No changes detected.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to update project with ID: {ProjectId}", id);
-                return new ServiceResult(false, "An internal error occurred while updating the project.");
+                _logger.LogError(ex, "Failed to update project ID: {ProjectId}", id);
+                return new ServiceResult(false, "An error occurred while updating the project.");
             }
         }
+
 
         public async Task<ServiceResult> DeleteAsync(string id)
         {
@@ -301,8 +313,8 @@ namespace TrustFlow.Core.Services
                     return new ServiceResult(false, $"Project with ID '{projectId}' not found.");
                 }
 
-                var userExists = await _users.Find(u => u.Id == newMember.UserId).AnyAsync();
-                if (!userExists)
+                var userExists = await _users.Find(u => u.Id == newMember.UserId).FirstOrDefaultAsync();
+                if (userExists == null)
                 {
                     return new ServiceResult(false, $"User with ID '{newMember.UserId}' does not exist.");
                 }
@@ -312,6 +324,7 @@ namespace TrustFlow.Core.Services
                 {
                     return new ServiceResult(false, $"User with ID '{newMember.UserId}' is already a member of this project.");
                 }
+                newMember.ProfilePicUrl = userExists.ProfilePictureUrl;
 
                 var filter = Builders<Project>.Filter.Eq(p => p.Id, projectId);
                 var update = Builders<Project>.Update
@@ -424,6 +437,29 @@ namespace TrustFlow.Core.Services
             {
                 _logger.LogError(ex, "Failed to retrieve projects count for user ID: {UserId}", userId);
                 return new ServiceResult(false, "An internal error occurred while retrieving user's projects count.");
+            }
+        }
+
+        public async Task<ServiceResult> IsUserExistInProject(string userid)
+        {
+            try
+            {
+                var filter = Builders<Project>.Filter.Or(
+                    Builders<Project>.Filter.Eq(p => p.LeadUserId, userid),
+                    Builders<Project>.Filter.Eq(p => p.ManagerUserId, userid),
+                    Builders<Project>.Filter.ElemMatch(
+                        p => p.Members,
+                        m => m.UserId == userid
+                    )
+                );
+                var isUserExistInProject = await _projects.Find(filter).AnyAsync();
+                
+                return new ServiceResult(true,"Succesfully Verfied user exist in project",isUserExistInProject);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch user exists in  projects for user ID: {UserId}", userid);
+                return new ServiceResult(false, "An internal error occurred while fetch user exists in  projects.",null);
             }
         }
     }
